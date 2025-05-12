@@ -1,4 +1,4 @@
-package login;
+package Kudeatzailea;
 
 import java.awt.EventQueue;
 
