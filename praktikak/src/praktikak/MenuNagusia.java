@@ -71,7 +71,10 @@ public class MenuNagusia extends JFrame {
         // 2. botoia — erabiltzaileentzako
         JButton btn2 = sortuBotoiLeuna("Erabiltzaileak", letra, botoiNeurriak, urdinNormala, urdinHover, urdinKlik);
         botoiPanela.add(btn2);
-
+        btn2.addActionListener(e -> {
+            ErabiltzaileLehioa erabiltzaileLeihoa = new ErabiltzaileLehioa();
+            erabiltzaileLeihoa.setVisible(true);
+        });
         // Gehitu botoien panela edukiontzira
         edukiontzia.add(botoiPanela);
     }
