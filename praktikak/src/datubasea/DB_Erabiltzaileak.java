@@ -32,7 +32,7 @@ public class DB_Erabiltzaileak {
             System.err.println("Errore bat egon da kontsulta egitean: " + e.getMessage());
             e.printStackTrace();
         } finally {
-            itxiSesioa(); // Konektibitatea itxi
+            DBGestorea.itxiSesioa(); // Konektibitatea itxi
         }
     }
 

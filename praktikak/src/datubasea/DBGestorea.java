@@ -39,34 +39,4 @@ public class DBGestorea {
         }
     }
 
-    // Erabiltzailearen historialari buruzko kontsulta egitea
-    public static void erabiltzailearenHistorialaIkusi(String erabiltzaileNan) {
-        String kontsulta = "SELECT * FROM Bidai_historiala WHERE erabiltzaile_NAN = ?"; 
-
-        try (PreparedStatement stmt = getConexion().prepareStatement(kontsulta)) {
-            // Parametroa jarri kontsultaren prestatuan
-            stmt.setString(1, erabiltzaileNan);
-
-            // Kontsulta exekutatu eta emaitzak lortu
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    // Emaitzak jaso eta inprimatu
-                    int id = rs.getInt("Bidaia_id");
-   
-
-                    System.out.println("ID: " + id );
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("Errore bat egon da kontsulta egitean: " + e.getMessage());
-            e.printStackTrace();
-        } finally {
-            itxiSesioa(); // Konektibitatea itxi
-        }
-    }
-
-    public static void main(String[] args) {
-        // Adibide bat: erabiltzailearen historialaren kontsulta egitea
-        erabiltzailearenHistorialaIkusi("12345678A"); // Hemen sartu erabiltzailearen NAN-a
-    }
 }
