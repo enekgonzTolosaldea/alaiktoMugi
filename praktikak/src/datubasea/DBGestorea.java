@@ -9,9 +9,9 @@ import java.sql.SQLException;
 public class DBGestorea {
 
     // Konektatzeko datuak
-    private static final String DB = "jdbc:mysql://10.23.25.23:3306/alaiktomugi?useSSL=false&serverTimezone=UTC";
-    private static final String ERABILTZAILEAK = "";
-    private static final String PASAHITZA = "";
+    private static final String DB = "jdbc:mysql://10.23.26.119:3306/alaiktomugi?useSSL=false&serverTimezone=UTC";
+    private static final String ERABILTZAILEAK = "arkaitz";
+    private static final String PASAHITZA = "pvlbtnse";
 
     private static Connection connection = null;
 
@@ -24,7 +24,7 @@ public class DBGestorea {
             } catch (SQLException e) {
                 e.printStackTrace();
             }
-        }
+        }	
         return connection;
     }
 
