@@ -45,9 +45,20 @@ public class DB_Gidariak
 		stmt.setString(6, kokapena);
 		stmt.setString(7, lan_lekua);
 		stmt.setString(8, matrikula);
-		
+
 		// WHERE
 		stmt.setString(9, nan);
+
+		stmt.executeUpdate();
+
+	}
+
+	public static void deleteGidaria(String nan) throws SQLException
+	{
+		String				delete_sql	= "DELETE FROM gidaria WHERE NAN = ?";
+		PreparedStatement	stmt		= conn.prepareStatement(delete_sql);
+
+		stmt.setString(1, nan);
 
 		stmt.executeUpdate();
 

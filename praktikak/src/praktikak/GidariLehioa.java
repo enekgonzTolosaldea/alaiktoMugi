@@ -3,6 +3,7 @@ package praktikak;
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.border.EmptyBorder;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 
@@ -13,6 +14,8 @@ import java.awt.event.*;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Vector;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class GidariLehioa extends JFrame
 {
@@ -24,16 +27,16 @@ public class GidariLehioa extends JFrame
 	public enum Egoera
 	{
 		Gehitu, Editatu;
+	}
 
-//		void setBorder(Border gorria)
-//		{
-//			// TODO Auto-generated method stub
-//			
-//		}
+	public enum Mota
+	{
+		DNI, Matrikula, posta, telf, izena;
 	}
 
 	public GidariLehioa()
 	{
+		
 		setTitle("Kudeatzailea");
 		setSize(800, 600);
 		setResizable(false);
@@ -58,12 +61,21 @@ public class GidariLehioa extends JFrame
 		// Taula
 		modelo = new DefaultTableModel(new Object[]
 		{
-				"NAN", "Izena", "Abizena", "Posta", "Telefono zenbakia", "Pasahitza", "Kokapena", "Lan lekua",
-				"Matrikula"
+				"NAN", "Izena", "Abizena", "Posta", "Telefono zenbakia", "Pasahitza", "Kokapena", "Lan lekua", "Matrikula"
 		}, 0);
 		taula = new JTable(modelo);
 		JScrollPane scrollPane = new JScrollPane(taula);
 		edukiontzia.add(scrollPane, BorderLayout.CENTER);
+		taula.setDefaultEditor(Object.class, null);
+		taula.setRowHeight(30);
+		
+		DefaultTableCellRenderer renderer = new DefaultTableCellRenderer();
+		renderer.setHorizontalAlignment(JLabel.CENTER); // testua zentratzeko
+		renderer.setBorder(new EmptyBorder(10, 10, 10, 10)); // Añade padding interno
+
+		for (int i = 0; i < taula.getColumnCount(); i++) {
+		    taula.getColumnModel().getColumn(i).setCellRenderer(renderer);
+		}
 		// Datu baseko gidarien datuak bistaratzeko
 		try
 		{
@@ -146,10 +158,7 @@ public class GidariLehioa extends JFrame
 			panel.add(new JLabel("Matrikula:"));
 			panel.add(matrikulaField);
 
-			balidazioa(
-					Egoera.Gehitu, nanField, izenaField, abizenaField, postaField, tel_zenbField, passField, kokapenaField, lekuaField,
-					matrikulaField, panel
-			);
+			balidazioa(Egoera.Gehitu, nanField, izenaField, abizenaField, postaField, tel_zenbField, passField, kokapenaField, lekuaField, matrikulaField, panel);
 
 		});
 
@@ -179,10 +188,9 @@ public class GidariLehioa extends JFrame
 				JTextField	lekuaField		= new JTextField(lan_lekua);
 				JTextField	matrikulaField	= new JTextField(matrikula);
 
-				
 				nanField.setEditable(false);
 
-				JPanel		panel			= new JPanel(new GridLayout(9, 2));
+				JPanel panel = new JPanel(new GridLayout(9, 2));
 				panel.add(new JLabel("NAN:"));
 				panel.add(nanField);
 				panel.add(new JLabel("Izena:"));
@@ -202,10 +210,7 @@ public class GidariLehioa extends JFrame
 				panel.add(new JLabel("Matrikula:"));
 				panel.add(matrikulaField);
 
-				balidazioa(
-						Egoera.Editatu, nanField, izenaField, abizenaField, postaField, tel_zenbField, passField, kokapenaField,
-						lekuaField, matrikulaField, panel
-				);
+				balidazioa(Egoera.Editatu, nanField, izenaField, abizenaField, postaField, tel_zenbField, passField, kokapenaField, lekuaField, matrikulaField, panel);
 
 			}
 			else
@@ -219,7 +224,29 @@ public class GidariLehioa extends JFrame
 			int selectedRow = taula.getSelectedRow();
 			if (selectedRow >= 0)
 			{
-				modelo.removeRow(selectedRow);
+
+				String nan = (String) modelo.getValueAt(selectedRow, 0);
+
+				System.out.println(nan);
+				try
+				{
+					DB_Gidariak.deleteGidaria(nan);
+				}
+				catch (SQLException e1)
+				{
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+				try
+				{
+
+					gidariakBistaratu();
+				}
+				catch (SQLException e1)
+				{
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
 			}
 			else
 			{
@@ -230,6 +257,7 @@ public class GidariLehioa extends JFrame
 
 	/**
 	 * @param egoera
+	 * @param nanField
 	 * @param izenaField
 	 * @param abizenaField
 	 * @param postaField
@@ -240,22 +268,32 @@ public class GidariLehioa extends JFrame
 	 * @param matrikulaField
 	 * @param panel
 	 */
-	public void balidazioa(Egoera mota, JTextField nanField, JTextField izenaField, JTextField abizenaField, JTextField postaField,
-			JTextField tel_zenbField, JTextField passField, JTextField kokapenaField, JTextField lekuaField,
-			JTextField matrikulaField, JPanel panel)
+	public void balidazioa(Egoera mota, JTextField nanField, JTextField izenaField, JTextField abizenaField, JTextField postaField, JTextField tel_zenbField, JTextField passField, JTextField kokapenaField, JTextField lekuaField, JTextField matrikulaField, JPanel panel)
 	{
 		boolean zuzena = false;
 
 		while (!zuzena)
 		{
 
-			int result = JOptionPane
-					.showConfirmDialog(this, panel, "Erabiltzaile berria", JOptionPane.OK_CANCEL_OPTION);
+			int result = JOptionPane.showConfirmDialog(this, panel, "Erabiltzaile berria", JOptionPane.OK_CANCEL_OPTION);
 
 			if (result != JOptionPane.OK_OPTION)
 			{
 				break;
 			}
+			
+			Border defaultBorder = UIManager.getLookAndFeel().getDefaults().getBorder("TextField.border");
+
+			// Bordeak defektuz jartzeko
+			nanField.setBorder(defaultBorder);
+			izenaField.setBorder(defaultBorder);
+			abizenaField.setBorder(defaultBorder);
+			postaField.setBorder(defaultBorder);
+			tel_zenbField.setBorder(defaultBorder);
+			passField.setBorder(defaultBorder);
+			kokapenaField.setBorder(defaultBorder);
+			lekuaField.setBorder(defaultBorder);
+			matrikulaField.setBorder(defaultBorder);
 
 			boolean			error		= false;
 			StringBuilder	errorMsg	= new StringBuilder("Erroreak:\n");
@@ -272,62 +310,49 @@ public class GidariLehioa extends JFrame
 			String			lekua		= lekuaField.getText().trim();
 			String			matrikula	= matrikulaField.getText().trim();
 
-			// if (nan.isEmpty() || izena.isEmpty() || abizena.isEmpty() ||
-			// posta.isEmpty() || telefonoa.isEmpty() || pasahitza.isEmpty()
-			// || kokapena.isEmpty() || lekua.isEmpty() ||
-			// matrikula.isEmpty())
-			// {
-			// JOptionPane.showMessageDialog(this , "hutsik dago", "Errorea:
-			// ", JOptionPane.ERROR_MESSAGE);
-			// return;
-			// }
-
-			if (!isDNI(nan))
+			if (!check(nan, Mota.DNI))
 			{
 				nanField.setBorder(Gorria);
 				error = true;
-				errorMsg.append("NAN \n");
+				errorMsg.append("NAN ondo sartu \n");
 			}
-			if (!isIzena(izena))
+			if (!check(izena, Mota.izena))
 			{
 				izenaField.setBorder(Gorria);
 				error = true;
-				errorMsg.append("Izena \n");
+				errorMsg.append("Izenan bakarrik letrak sartu \n");
 			}
-			if (!isIzena(abizena))
+			if (!check(abizena, Mota.izena))
 			{
 				abizenaField.setBorder(Gorria);
 				error = true;
-				errorMsg.append("Abizena \n");
+				errorMsg.append("Abizenan bakarrik letrak sartu \n");
 			}
-
-			if (!isIzena(lekua))
+			if (!check(lekua, Mota.izena))
 			{
 				lekuaField.setBorder(Gorria);
 				error = true;
-				errorMsg.append("Lan Lekua \n");
+				errorMsg.append("Lan lekua bakarrik letrak sartu \n");
 			}
-
-			if (!isIzena(kokapena))
+			if (!check(kokapena, Mota.izena))
 			{
 				kokapenaField.setBorder(Gorria);
 				error = true;
-				errorMsg.append("Kokapena \n");
+				errorMsg.append("Lan lekua \n");
 			}
-
-			if (!isMatrikula(matrikula))
+			if (!check(matrikula, Mota.Matrikula))
 			{
 				matrikulaField.setBorder(Gorria);
 				error = true;
 				errorMsg.append("Matrikula \n");
 			}
-			if (!isTelf(telefonoa))
+			if (!check(telefonoa, Mota.telf))
 			{
 				tel_zenbField.setBorder(Gorria);
 				error = true;
 				errorMsg.append("Telefono zenbakia \n");
 			}
-			if (!isPosta(posta))
+			if (!check(posta, Mota.posta))
 			{
 				postaField.setBorder(Gorria);
 				error = true;
@@ -343,24 +368,16 @@ public class GidariLehioa extends JFrame
 			{
 				if (mota == Egoera.Gehitu)
 				{
-					DB_Gidariak.addGidariak(
-							nanField.getText(), izenaField.getText(), abizenaField.getText(), postaField.getText(),
-							tel_zenbField.getText(), passField.getText(), kokapenaField.getText(), lekuaField.getText(),
-							matrikulaField.getText()
-					);
+					DB_Gidariak.addGidariak(nanField.getText(), izenaField.getText(), abizenaField.getText(), postaField.getText(), tel_zenbField.getText(), passField.getText(), kokapenaField.getText(), lekuaField.getText(), matrikulaField.getText());
 				}
 				else if (mota == Egoera.Editatu)
 				{
-					DB_Gidariak.editGidariak(
-							nanField.getText(), izenaField.getText(), abizenaField.getText(), postaField.getText(),
-							tel_zenbField.getText(), passField.getText(), kokapenaField.getText(), lekuaField.getText(),
-							matrikulaField.getText()
-					);
+					DB_Gidariak.editGidariak(nanField.getText(), izenaField.getText(), abizenaField.getText(), postaField.getText(), tel_zenbField.getText(), passField.getText(), kokapenaField.getText(), lekuaField.getText(), matrikulaField.getText());
 				}
 
 				try
 				{
-					
+
 					gidariakBistaratu();
 				}
 				catch (SQLException e)
@@ -373,10 +390,8 @@ public class GidariLehioa extends JFrame
 			}
 			catch (SQLException e1)
 			{
-				e1.printStackTrace();
-				JOptionPane.showMessageDialog(
-						this, "Errorea datu-basearekin: " + e1.getMessage(), "Errorea", JOptionPane.ERROR_MESSAGE
-				);
+				JOptionPane.showMessageDialog(this, e1.getMessage(), "Errorea: ", JOptionPane.ERROR_MESSAGE);
+				continue;
 			}
 
 			break;
@@ -386,10 +401,9 @@ public class GidariLehioa extends JFrame
 	// Gehitu erabiltzailea taulan
 	private void gidariakBistaratu() throws SQLException
 	{
-		
-		
+
 		modelo.setRowCount(0);
-		
+
 		ResultSet rs = DB_Gidariak.getDatuak();
 
 		while (rs.next())
@@ -416,34 +430,33 @@ public class GidariLehioa extends JFrame
 	private void filtrar()
 	{
 		String								bilatu	= bilatzailea.getText().toLowerCase();
+		String								regex	= Pattern.quote(bilatu);				// karaketere
+																							// bereziak
+																							// kentzeko
 		TableRowSorter<DefaultTableModel>	sorter	= new TableRowSorter<>(modelo);
 		taula.setRowSorter(sorter);
 		sorter.setRowFilter(RowFilter.regexFilter("(?i)" + bilatu));
 	}
 
-	public static boolean isIzena(String testua)
+	public static boolean check(String testua, Mota Mota)
 	{
-		return testua.matches("(?i)(?=.*[a-záéíóúñü])[a-záéíóúñü\\s\\-\\.']+");
-	}
 
-	public static boolean isTelf(String testua)
-	{
-		return testua.matches("[0-9]{9}");
-	}
+		String regex = null;
 
-	public static boolean isPosta(String testua)
-	{
-		return testua.matches("^[\\w\\.-]+@[\\w\\.-]+\\.[a-zA-Z]{2,}$");
-	}
+		if (Mota == Mota.DNI)
+			regex = "[0-9]{8}[A-Z]{1}";
+		if (Mota == Mota.Matrikula)
+			regex = "[0-9]{4}[A-Z]{3}";
+		if (Mota == Mota.posta)
+			regex = "^[\\w\\.-]+@[\\w\\.-]+\\.[a-zA-Z]{2,}$";
+		if (Mota == Mota.telf)
+			regex = "[0-9]{9}";
+		if (Mota == Mota.izena)
+			regex = "^(?i)([a-záéíóúñü]+(?:[\\s'\\-][a-záéíóúñü]+)*)$";
+		Pattern	pattern	= Pattern.compile(regex);
+		Matcher	matcher	= pattern.matcher(testua);
 
-	public static boolean isMatrikula(String testua)
-	{
-		return testua.matches("[0-9]{4}[A-Z]{3}");
-	}
-
-	public static boolean isDNI(String testua)
-	{
-		return testua.matches("[0-9]{8}[A-Z]{1}");
+		return matcher.matches();
 	}
 
 }
