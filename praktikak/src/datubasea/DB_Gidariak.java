@@ -11,15 +11,8 @@ public class DB_Gidariak
 
 	static Connection conn = DBGestorea.getConexion();
 
-	public static void main(String[] args)
-	{
-
-	}
-
-	public static void addGidariak(
-			String nan, String izena, String abizena, String posta, String Tel_zenb, String pasahitza, String kokapena,
-			String lan_lekua, String matrikula
-	) throws SQLException
+	public static void addGidariak(String nan, String izena, String abizena, String posta, String Tel_zenb,
+			String pasahitza, String kokapena, String lan_lekua, String matrikula) throws SQLException
 	{
 		String				sql_insert	= "INSERT INTO gidaria(NAN, Izena, Abizena, Posta, Tel_Zenb, Pasahitza, Kokapena, Lan_lekua, Matrikula) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)";
 		PreparedStatement	stmt		= conn.prepareStatement(sql_insert);
@@ -38,13 +31,35 @@ public class DB_Gidariak
 
 	}
 
+	public static void editGidariak(String nan, String izena, String abizena, String posta, String Tel_zenb,
+			String pasahitza, String kokapena, String lan_lekua, String matrikula) throws SQLException
+	{
+		String				sql_update	= "UPDATE gidaria SET Izena = ?, Abizena = ?, Posta = ?, Tel_zenb = ?, Pasahitza = ?, Kokapena = ?, Lan_lekua = ?, Matrikula = ? WHERE NAN = ?";
+		PreparedStatement	stmt		= conn.prepareStatement(sql_update);
+
+		stmt.setString(1, izena);
+		stmt.setString(2, abizena);
+		stmt.setString(3, posta);
+		stmt.setString(4, Tel_zenb);
+		stmt.setString(5, pasahitza);
+		stmt.setString(6, kokapena);
+		stmt.setString(7, lan_lekua);
+		stmt.setString(8, matrikula);
+		
+		// WHERE
+		stmt.setString(9, nan);
+
+		stmt.executeUpdate();
+
+	}
+
 	public static ResultSet getDatuak() throws SQLException
 	{
 
 		String				sql_check	= "SELECT * FROM gidaria";
 		PreparedStatement	stmt		= conn.prepareStatement(sql_check);
 
-		ResultSet			rs			= stmt.executeQuery();
+		ResultSet			rs1			= stmt.executeQuery();
 
 //	    String atributuak;
 //	    while (rs.next());
@@ -52,7 +67,7 @@ public class DB_Gidariak
 //	    	datuak.add(rs.getString(0));
 //	    }
 
-		return rs;
+		return rs1;
 	}
 
 }
