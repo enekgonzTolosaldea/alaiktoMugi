@@ -13,12 +13,10 @@ public class DB_Erabiltzaileak
 	public static ResultSet getDatuak() throws SQLException
 	{
 
-		String				sql_check	= "SELECT * FROM gidaria";
+		String				sql_check	= "SELECT * FROM erabiltzailea";
 		PreparedStatement	stmt		= conn.prepareStatement(sql_check);
 
 		ResultSet			rs1			= stmt.executeQuery();
-
-
 
 		return rs1;
 	}

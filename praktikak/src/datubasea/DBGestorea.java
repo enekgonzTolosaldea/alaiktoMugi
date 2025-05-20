@@ -38,5 +38,26 @@ public class DBGestorea {
             e.printStackTrace();
         }
     }
+    /**
+     * Erabiltzailearen historialeko bidaiak lortzeko funtzioa.
+     * 
+     * @param NAN Erabiltzailearen NAN
+     * @return ResultSet Bidaiaren historioko datuak
+     * @throws SQLException SQL errorea gertatzen bada
+     */
+    public static ResultSet getHistorikoak(String NAN) throws SQLException {
+        // Datu-basearekin konektatzea
+        Connection conn = getConexion();
+
+        // SQL kontsulta prestatzea
+        String sql = "SELECT bidaia_ID, gidari_nan,erabiltzaile_nan, data, ordua, pertsona_kopurua, hasiera, helmuga, egoera FROM bidai_historiala WHERE erabiltzaile_nan = ?";
+
+        // PreparedStatement-a prestatzea
+        PreparedStatement stmt = conn.prepareStatement(sql);
+        stmt.setString(1, NAN); // NAN parametroa jartzen da kontsultan
+
+        // Kontsulta exekutatzea eta emaitzak lortzea
+        return stmt.executeQuery(); // ResultSet-a itzultzen da, non historialeko bidaiak dauden
+    }
 
 }
