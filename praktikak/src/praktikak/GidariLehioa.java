@@ -11,8 +11,10 @@ import datubasea.DB_Gidariak;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Time;
 import java.util.Vector;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -20,9 +22,11 @@ import java.util.regex.Pattern;
 public class GidariLehioa extends JFrame
 {
 
-	private DefaultTableModel	modelo;
-	private JTable				taula;
-	private JTextField			bilatzailea;
+	private DefaultTableModel					modelo;
+	private DefaultTableModel					historialaModeloa;
+	private JTable								taula;
+	private JTextField							bilatzailea;
+	private TableRowSorter<DefaultTableModel>	sorter;
 
 	public enum Egoera
 	{
@@ -36,7 +40,7 @@ public class GidariLehioa extends JFrame
 
 	public GidariLehioa()
 	{
-		
+
 		setTitle("Kudeatzailea");
 		setSize(800, 600);
 		setResizable(false);
@@ -58,23 +62,51 @@ public class GidariLehioa extends JFrame
 		topPanel.add(bilatzailea, BorderLayout.CENTER);
 		edukiontzia.add(topPanel, BorderLayout.NORTH);
 
+		int				delay			= 15000;										// 15
+																						// segundos
+																						// en
+																						// milisegundos
+
+		ActionListener	refreshTable	= new ActionListener()
+										{
+
+											@Override
+											public void actionPerformed(ActionEvent e)
+											{
+												try
+												{
+													gidariakBistaratu();
+												}
+												catch (SQLException ex)
+												{
+													ex.printStackTrace();
+												}
+											}
+
+										};
+
+		new Timer(delay, refreshTable).start();
 		// Taula
 		modelo = new DefaultTableModel(new Object[]
 		{
 				"NAN", "Izena", "Abizena", "Posta", "Telefono zenbakia", "Pasahitza", "Kokapena", "Lan lekua", "Matrikula"
 		}, 0);
 		taula = new JTable(modelo);
+		sorter = new TableRowSorter<>(modelo);
+		taula.setRowSorter(sorter);
+		sorter.setSortable(5, false);
 		JScrollPane scrollPane = new JScrollPane(taula);
 		edukiontzia.add(scrollPane, BorderLayout.CENTER);
 		taula.setDefaultEditor(Object.class, null);
 		taula.setRowHeight(30);
-		
+
 		DefaultTableCellRenderer renderer = new DefaultTableCellRenderer();
 		renderer.setHorizontalAlignment(JLabel.CENTER); // testua zentratzeko
 		renderer.setBorder(new EmptyBorder(10, 10, 10, 10)); // Añade padding interno
 
-		for (int i = 0; i < taula.getColumnCount(); i++) {
-		    taula.getColumnModel().getColumn(i).setCellRenderer(renderer);
+		for (int i = 0; i < taula.getColumnCount(); i++)
+		{
+			taula.getColumnModel().getColumn(i).setCellRenderer(renderer);
 		}
 		// Datu baseko gidarien datuak bistaratzeko
 		try
@@ -87,6 +119,69 @@ public class GidariLehioa extends JFrame
 			e.printStackTrace();
 		}
 
+		taula.addMouseListener(new MouseAdapter()
+		{
+
+			@Override
+			public void mouseClicked(MouseEvent evt)
+			{
+				if (evt.getClickCount() == 2)
+				{ // Solo si es doble click
+					int row = taula.getSelectedRow();
+					if (row != -1)
+					{
+						int		modeloRow	= taula.convertRowIndexToModel(row);
+						String	NAN			= modelo.getValueAt(modeloRow, 0).toString();
+						System.out.println(NAN);
+
+						JFrame historialLehioa = new JFrame("Erabiltzailearen Historiala (" + NAN + ")");
+						historialLehioa.setSize(800, 500);
+						historialLehioa.setLocationRelativeTo(null);
+
+						JPanel edukiontzia = new JPanel(new BorderLayout(10, 10));
+						edukiontzia.setBorder(new EmptyBorder(10, 10, 10, 10));
+						historialLehioa.setContentPane(edukiontzia);
+
+						// Panel superior con título y campo de búsqueda
+						JPanel	topPanel	= new JPanel(new BorderLayout(10, 10));
+						JLabel	lbl			= new JLabel("Bidaia Historiala", JLabel.LEFT);
+						lbl.setFont(new Font("Segoe UI", Font.BOLD, 20));
+						topPanel.add(lbl, BorderLayout.WEST);
+
+						JTextField bilatzaileaHistoriala = new JTextField();
+						bilatzaileaHistoriala.setToolTipText("Bilatu...");
+						topPanel.add(bilatzaileaHistoriala, BorderLayout.CENTER);
+
+						edukiontzia.add(topPanel, BorderLayout.NORTH);
+
+						// Crear un nuevo modelo y tabla para el historial
+						historialaModeloa = new DefaultTableModel(new Object[]
+						{
+								"Gidaria NAN", "Data", "Ordua", "Erabiltzailea", "Hasiera", "Amaiera", "proba"
+						}, 0);
+						JTable		historialTaula	= new JTable(historialaModeloa);
+						JScrollPane	scrollPane		= new JScrollPane(historialTaula);
+						edukiontzia.add(scrollPane, BorderLayout.CENTER);
+
+						historialTaula.setDefaultEditor(Object.class, null);
+						historialTaula.setRowHeight(30);
+
+						try
+						{
+							gidarienBidaiakBistaratu(NAN);
+						}
+						catch (SQLException e)
+						{
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+
+						historialLehioa.setVisible(true);
+					}
+				}
+			}
+
+		});
 		// Botoiak behean
 		JPanel	botoiPanela	= new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
 		JButton	btnGehitu	= new JButton("➕ Gehitu");
@@ -125,7 +220,6 @@ public class GidariLehioa extends JFrame
 		});
 
 		// Gehitu
-
 		btnGehitu.addActionListener(e -> {
 
 			JTextField	nanField		= new JTextField();
@@ -281,7 +375,7 @@ public class GidariLehioa extends JFrame
 			{
 				break;
 			}
-			
+
 			Border defaultBorder = UIManager.getLookAndFeel().getDefaults().getBorder("TextField.border");
 
 			// Bordeak defektuz jartzeko
@@ -338,7 +432,7 @@ public class GidariLehioa extends JFrame
 			{
 				kokapenaField.setBorder(Gorria);
 				error = true;
-				errorMsg.append("Lan lekua \n");
+				errorMsg.append("Kokapena ondo sartu \n");
 			}
 			if (!check(matrikula, Mota.Matrikula))
 			{
@@ -398,6 +492,40 @@ public class GidariLehioa extends JFrame
 		}
 	}
 
+	private void gidarienBidaiakBistaratu(String NAN) throws SQLException
+	{
+		historialaModeloa.setRowCount(0); // Limpiar la tabla antes de rellenarla
+
+		ResultSet rs = DB_Gidariak.getDatuakBidaiak(NAN);
+		while (rs.next())
+		{
+//			String	gidariaNan		= rs.getString("Gidari_nan");
+//			Date	data			= rs.getDate("Data");
+//			Time	ordua			= rs.getTime("ordua");
+//			String	erabiltzailea	= rs.getString("Erabiltzaile_nan");
+//			String	hasiera			= rs.getString("hasiera");
+//			String	helmuga			= rs.getString("helmuga");
+
+			String	gidariaNan			= rs.getString("Gidari_nan");
+			String	erabNAN				= rs.getString("erabiltzaile_nan");
+			Date	data				= rs.getDate("Data");
+			Time	ordua				= rs.getTime("ordua");
+			String	hasiera				= rs.getString("hasiera");
+			String	helmuga				= rs.getString("helmuga");
+			String	gidariIzena			= rs.getString("gidari_izena");
+			String	gidariAbizena		= rs.getString("gidari_abizena");
+			String	erabiltzaileIzena	= rs.getString("erabiltzaile_izena");
+			String	erabiltzaileAbizena	= rs.getString("erabiltzaile_abizena");
+
+			String	erabIzena			= erabiltzaileIzena + " " + erabiltzaileAbizena;
+			String	gidIzena			= gidariIzena + " " + gidariAbizena;
+			historialaModeloa.addRow(new Object[]
+			{
+					gidariaNan, gidIzena, erabNAN, erabIzena, data, ordua, hasiera, helmuga
+			});
+		}
+	}
+
 	// Gehitu erabiltzailea taulan
 	private void gidariakBistaratu() throws SQLException
 	{
@@ -429,13 +557,9 @@ public class GidariLehioa extends JFrame
 	// Bilatu erabiltzaileak izenaren edo abizenaren arabera
 	private void filtrar()
 	{
-		String								bilatu	= bilatzailea.getText().toLowerCase();
-		String								regex	= Pattern.quote(bilatu);				// karaketere
-																							// bereziak
-																							// kentzeko
-		TableRowSorter<DefaultTableModel>	sorter	= new TableRowSorter<>(modelo);
-		taula.setRowSorter(sorter);
-		sorter.setRowFilter(RowFilter.regexFilter("(?i)" + bilatu));
+		String									bilatu	= bilatzailea.getText().toLowerCase();
+		RowFilter<DefaultTableModel, Object>	rf		= RowFilter.regexFilter("(?i)" + Pattern.quote(bilatu));
+		sorter.setRowFilter(rf);
 	}
 
 	public static boolean check(String testua, Mota Mota)

@@ -34,7 +34,7 @@ public class DBGestorea
 		return connection;
 	}
 
-	// Konektd ibitatea itxi
+	// Konektibitatea itxi
 	public static void itxiSesioa()
 	{
 		try
