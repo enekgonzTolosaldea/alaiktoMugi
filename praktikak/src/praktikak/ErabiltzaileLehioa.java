@@ -7,279 +7,339 @@ import javax.swing.table.TableRowSorter;
 import datubasea.DB_Erabiltzaileak;
 import datubasea.DBGestorea;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter; 
+import java.awt.event.WindowEvent;   
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Time;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.DocumentEvent;
+import javax.swing.RowFilter;
 
-/**
- * ErabiltzaileLehioa klasea, erabiltzaileen datuak kudeatzeko leihoa da. Taula
- * batean erabiltzaileen informazioa erakusten du, eta bilatze funtzionalitatea
- * ere eskaintzen du.
- */
 public class ErabiltzaileLehioa extends JFrame {
-    private DefaultTableModel modelo;         // Taularako modeloa
-    private JTable taula;                      // Taula non datuak erakutsiko diren
-    private JTextField bilatzailea;           // Bilatzailea erabiltzailearen izen edo abizena bilatzeko
 
-    /**
-     * Eraikitzailea. Leihoa sortzen du, konfiguratzen du eta datuak kargatzen ditu.
-     */
+    private DefaultTableModel modelo;
+    private JTable taula;
+    private JTextField bilatzailea;
+    private TableRowSorter<DefaultTableModel> sorter;
+    private Timer historialRefreshTimer;
+
+    private static final String HUTSIK_EGOERA_TXARTELA = "HutsikEgoeraTxartela";
+    private static final String TAULA_BISTA_TXARTELA = "TaulaBistaTxartela";
+
     public ErabiltzaileLehioa() {
-        setTitle("Kudeatzailea"); // Leihoaren izena
-        setSize(800, 600); // Leihoaren tamaina
-        setResizable(false); // Leihoa ez da aldatzen tamainan
-        setLocationRelativeTo(null); // Leihoa pantailaren erdian kokatzen du
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Leihoa ixterakoan aplikazioa itxi
+        setTitle("Gidarien Kudeaketa");
+        setSize(800, 600);
+        setResizable(false);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-        // Edukiontzia (panel) sortzen da, non goiburua, bilatzailea eta taula egon
-        // diren
         JPanel edukiontzia = new JPanel(new BorderLayout(10, 10));
         edukiontzia.setBorder(new EmptyBorder(10, 10, 10, 10));
         setContentPane(edukiontzia);
 
-        // Goiburua + Bilatzailea
-        JPanel topPanel = new JPanel(new BorderLayout(10, 10));
-        JLabel lbl = new JLabel("Erabiltzaileak", JLabel.LEFT);  
+        JPanel goikoPanel = new JPanel(new BorderLayout(10, 10));
+        JLabel lbl = new JLabel("Gidariak", JLabel.LEFT);
         lbl.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        topPanel.add(lbl, BorderLayout.WEST);
+        goikoPanel.add(lbl, BorderLayout.WEST);
 
-        bilatzailea = new JTextField(); // Bilatzailea saguaren bidez testu bat sartzeko
-        bilatzailea.setToolTipText("Bilatu izena edo abizena..."); // Tooltip-a
-        topPanel.add(bilatzailea, BorderLayout.CENTER);
-        edukiontzia.add(topPanel, BorderLayout.NORTH);
+        bilatzailea = new JTextField();
+        bilatzailea.setToolTipText("Bilatu NAN, izena edo abizena...");
+        goikoPanel.add(bilatzailea, BorderLayout.CENTER);
+        edukiontzia.add(goikoPanel, BorderLayout.NORTH);
 
-        // Bilaketa funtzionalitatea: erabiltzaileak idazten duen bakoitzean, taula
-        // filtra daiteke
-        bilatzailea.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void insertUpdate(javax.swing.event.DocumentEvent e) {
-                filtratu();  // Bilatzailea aldatu denean taula filtratzea
+        bilatzailea.getDocument().addDocumentListener(new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) {
+                filtratu();
             }
-
-            public void removeUpdate(javax.swing.event.DocumentEvent e) {
-                filtratu();  // Bilatzailea ezabatu denean taula filtratzea
+            public void removeUpdate(DocumentEvent e) {
+                filtratu();
             }
-
-            public void changedUpdate(javax.swing.event.DocumentEvent e) {
-                filtratu();  // Bilatzailea aldatu denean taula filtratzea
+            public void changedUpdate(DocumentEvent e) {
+                filtratu();
             }
         });
 
-        // Taula eta datuak erakusteko ScrollPane
-        modelo = new DefaultTableModel(new Object[]{
+        int delay = 15000;
+        ActionListener refreshTable = new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                try {
+                    erabiltzaileakBistaratu();
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        };
+        historialRefreshTimer = new Timer(delay, refreshTable);
+        historialRefreshTimer.start();
+
+        modelo = new DefaultTableModel(new Object[][]{}, new String[] {
             "NAN", "Izena", "Abizena", "Posta", "Telefono zenbakia", "Pasahitza"
-        }, 0);  // Taulako zutabeak definitzen ditu
-        taula = new JTable(modelo);  // Taula sortzen da
-        JScrollPane scrollPane = new JScrollPane(taula);  // Taula scrollable egiteko
+        });
+        taula = new JTable(modelo);
+        JScrollPane scrollPane = new JScrollPane(taula);
         edukiontzia.add(scrollPane, BorderLayout.CENTER);
 
-        // Taula editatzea debekatu egiten da (zuzenean aldatzea ezinezkoa da)
         taula.setDefaultEditor(Object.class, null);
 
-        // Datuak kargatu (datubasetik)
         try {
-            erabiltzaileakBistaratu();  // Erabiltzaileak taulan erakusteko funtzioa deitzen da
+            erabiltzaileakBistaratu();
         } catch (SQLException e) {
-            e.printStackTrace();  // Datuak kargatzean errore bat egon bada, mezua inprimatu
-            JOptionPane.showMessageDialog(this, "Errorea erabiltzaileak kargatzean: " + e.getMessage(), "Errorea", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Errorea gidariak kargatzean: " + e.getMessage(), "Errorea", JOptionPane.ERROR_MESSAGE);
         }
 
-        // Taula klikarekin historiala ikusteko aukera gehitzen da
         taula.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
                 int row = taula.getSelectedRow();
                 if (row != -1) {
-                    String NAN = modelo.getValueAt(row, 0).toString(); // NAN lortzen da (taulako lehenengo zutabea)
-                    ikusiHistoriala(NAN); // NAN hori erabiliz historialeko datuak lortzen dira
+                    int modeloLerroa = taula.convertRowIndexToModel(row);
+                    String NAN = modelo.getValueAt(modeloLerroa, 0).toString();
+                    ikusiHistoriala(NAN);
                 }
             }
         });
 
-        // Botoiak behean
         JPanel botoiPanela = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
         edukiontzia.add(botoiPanela, BorderLayout.SOUTH);
     }
 
-    /**
-     * Datu-baseko erabiltzaileen datuak taulan bistaratzen ditu.
-     *
-     * @throws SQLException SQL errorea gertatzen bada
-     */
     private void erabiltzaileakBistaratu() throws SQLException {
-        modelo.setRowCount(0);  // Taula hustu
-
-        // Datu-baseko datuak eskuratu
-        ResultSet rs = DB_Erabiltzaileak.getDatuak();
-
-        // Datu-baseko emaitzak taulan sartu
-        while (rs.next()) {
-            String NAN = rs.getString("NAN");
-            String izena = rs.getString("Izena");
-            String abizena = rs.getString("Abizena");
-            String posta = rs.getString("Posta");
-            String tel_zenb = rs.getString("Tel_zenb");
-            String pass = rs.getString("Pasahitza");
-
-            modelo.addRow(new Object[]{
-                NAN, izena, abizena, posta, tel_zenb, pass // Datuak gehitzen dira taulako row batean
-            });
-        }
-        // Itxi ResultSet
-        if (rs != null) {
-            try {
-                rs.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    /**
-     * Taula filtratzeko funtzioa. Bilatzailean sartutako testuaren arabera taula
-     * filtratzen du.
-     */
-    private void filtratu() {
-        // Bilatzailea lortu eta lortutako testua txiki-txiki bihurtu (case insensitive)
-        String bilatu = bilatzailea.getText().toLowerCase();
-        TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(modelo);  // Taulako row-ak ordenatzeko
-        taula.setRowSorter(sorter);
-        sorter.setRowFilter(RowFilter.regexFilter("(?i)" + bilatu));  // Bilatzailea regex bidez aplikatzen da
-    }
-
-    /**
-     * Erabiltzailearen NAN-a erabiliz, bere historialeko bidaiak erakusten ditu.
-     * Historiala hutsik badago, ez du leihoa irekiko.
-     *
-     * @param NAN Erabiltzailearen NAN-a
-     */
-    private void ikusiHistoriala(String NAN) {
-        DefaultTableModel historialModelo = new DefaultTableModel(new Object[]{
-            "Bidaia ID", "Gidari NAN", "Erabiltzaile NAN", "Data", "Ordua", "Pertsona kopurua", "Hasiera", "Helmuga"
-        }, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return false; // Taula ez editagarri bihurtu
-            }
-        };
-
+        modelo.setRowCount(0);
         ResultSet rs = null;
-        boolean datuakAurkituDira = false;
-
         try {
-            System.out.println("Historiala bilatzen NAN honentzat: " + NAN);
-            rs = DBGestorea.getHistorikoak(NAN);
-
-            if (rs.isBeforeFirst()) {
-                datuakAurkituDira = true;
-                while (rs.next()) {
-                    int bidaia_ID = rs.getInt("Bidaia_id");
-                    String Gidari_nan = rs.getString("Gidari_nan");
-                    String erabiltzaile_nan = rs.getString("erabiltzaile_nan");
-                    Date data = rs.getDate("data");
-                    Time ordua = rs.getTime("ordua");
-                    String pertsona_kopurua = rs.getString("pertsona_kopurua");
-                    String hasiera = rs.getString("hasiera");
-                    String helmuga = rs.getString("helmuga");
-
-                    historialModelo.addRow(new Object[]{
-                        bidaia_ID, Gidari_nan, erabiltzaile_nan, data, ordua, pertsona_kopurua, hasiera, helmuga
-                    });
-                }
-            } else {
-                JOptionPane.showMessageDialog(this,
-                    "Ez da historialik aurkitu erabiltzaile honentzat.",
-                    "Historiala hutsik",
-                    JOptionPane.INFORMATION_MESSAGE);
-                return; // Funtziotik irten, leihoa ez irekitzeko
+            rs = DB_Erabiltzaileak.getDatuak();
+            while (rs.next()) {
+                modelo.addRow(new Object[]{
+                    rs.getString("NAN"), rs.getString("Izena"), rs.getString("Abizena"), rs.getString("Posta"),
+                    rs.getString("Tel_zenb"), rs.getString("Pasahitza")
+                });
             }
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-            JOptionPane.showMessageDialog(this,
-                "Errorea gertatu da historialeko datuak kargatzean: " + e.getMessage(),
-                "Errorea",
-                JOptionPane.ERROR_MESSAGE);
-            return; // Errore bat badago, funtziotik irten, leihoa ez irekitzeko
         } finally {
-            if (rs != null) {
+            if (rs != null)
                 try {
                     rs.close();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+        }
+    }
+
+    private void filtratu() {
+        String bilatu = bilatzailea.getText().trim();
+        sorter = new TableRowSorter<>(modelo);
+        taula.setRowSorter(sorter);
+
+        if (bilatu.isEmpty())
+            sorter.setRowFilter(null);
+        else
+            sorter.setRowFilter(RowFilter.regexFilter("(?i)\\Q" + bilatu + "\\E"));
+    }
+
+    private void ikusiHistoriala(String NAN) {
+        boolean hasTrips = false;
+        ResultSet rsCheck = null;
+        try {
+            rsCheck = DBGestorea.getHistorikoak(NAN);
+            if (rsCheck != null && rsCheck.next()) {
+                hasTrips = true;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Errorea historialeko datuak egiaztatzean: " + e.getMessage(), "Errorea", JOptionPane.ERROR_MESSAGE);
+            return;
+        } finally {
+            if (rsCheck != null) {
+                try {
+                    rsCheck.close();
                 } catch (SQLException e) {
                     e.printStackTrace();
                 }
             }
         }
 
-        if (datuakAurkituDira) {
-            // --- Creación de la ventana del historial ---
-            JFrame historialLehioa = new JFrame("Erabiltzailearen Historiala: " + NAN);
-            historialLehioa.setSize(800, 600); // Tamaño similar a la ventana principal
-            historialLehioa.setResizable(false); // No redimensionable, como la principal
-            historialLehioa.setLocationRelativeTo(this);
-            historialLehioa.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-
-            // Contenedor principal de la ventana del historial
-            JPanel historialEdukiontzia = new JPanel(new BorderLayout(10, 10));
-            historialEdukiontzia.setBorder(new EmptyBorder(10, 10, 10, 10)); // Mismos márgenes que la principal
-            historialLehioa.setContentPane(historialEdukiontzia);
-
-            // --- Panel Superior (Título + Buscador) ---
-            JPanel historialTopPanel = new JPanel(new BorderLayout(10, 10)); // Mismos espaciados que el principal
-            
-            // Título de la ventana de historial
-            JLabel historialTitleLabel = new JLabel("Historiala", JLabel.LEFT);
-            historialTitleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
-            historialTopPanel.add(historialTitleLabel, BorderLayout.WEST);
-
-            // Buscador del historial
-            JTextField historialBilatzailea = new JTextField();
-            historialBilatzailea.setToolTipText("Bilatu historialeko datuak (adibidez: data, hasiera, helmuga...)");
-            historialTopPanel.add(historialBilatzailea, BorderLayout.CENTER); // Buscador en el centro
-
-            historialEdukiontzia.add(historialTopPanel, BorderLayout.NORTH); // Añadir el panel de cabecera al NORTE de la ventana
-
-            // --- Tabla de Historial ---
-            JTable historialTaula = new JTable(historialModelo);
-            historialTaula.setFillsViewportHeight(true);
-            historialTaula.setDefaultEditor(Object.class, null); // Asegurar que no sea editable
-            JScrollPane scrollPane = new JScrollPane(historialTaula);
-            historialEdukiontzia.add(scrollPane, BorderLayout.CENTER); // Tabla en el centro
-
-            // Filtrado del historial
-            TableRowSorter<DefaultTableModel> historialSorter = new TableRowSorter<>(historialModelo);
-            historialTaula.setRowSorter(historialSorter);
-
-            historialBilatzailea.getDocument().addDocumentListener(new DocumentListener() {
-                public void insertUpdate(DocumentEvent e) {
-                    filtratuHistoriala(historialBilatzailea.getText(), historialSorter);
-                }
-
-                public void removeUpdate(DocumentEvent e) {
-                    filtratuHistoriala(historialBilatzailea.getText(), historialSorter);
-                }
-
-                public void changedUpdate(DocumentEvent e) {
-                    filtratuHistoriala(historialBilatzailea.getText(), historialSorter);
-                }
-            });
-
-            historialLehioa.setVisible(true);
+        if (!hasTrips) {
+            JOptionPane.showMessageDialog(this, "Erabiltzaile honek ez du bidaia historialik erregistratuta.", "Ohartarazpena", JOptionPane.INFORMATION_MESSAGE);
+            return;
         }
+
+        JFrame historialLehioa = new JFrame("Erabiltzailearen Historiala: " + NAN);
+        historialLehioa.setSize(800, 600);
+        historialLehioa.setResizable(false);
+        historialLehioa.setLocationRelativeTo(this);
+        historialLehioa.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+        CardLayout historialTxartelDiseinua = new CardLayout();
+        JPanel historialTxartelPanela = new JPanel(historialTxartelDiseinua);
+        historialTxartelPanela.setBorder(new EmptyBorder(10, 10, 10, 10));
+        historialLehioa.setContentPane(historialTxartelPanela);
+
+        JPanel hutsikEgoeraPanela = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.insets = new Insets(10, 10, 10, 10);
+
+        JLabel goiburuaEtiketa = new JLabel("Ez dago bidaia historialik");
+        goiburuaEtiketa.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        goiburuaEtiketa.setHorizontalAlignment(SwingConstants.CENTER);
+        hutsikEgoeraPanela.add(goiburuaEtiketa, gbc);
+        gbc.gridy++;
+
+        JTextArea deskribapenArea = new JTextArea("Zure bidaia historiala hemen agertuko da.\n" +
+                "Ez dago daturik erakusteko.");
+        deskribapenArea.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        deskribapenArea.setWrapStyleWord(true);
+        deskribapenArea.setLineWrap(true);
+        deskribapenArea.setOpaque(false);
+        deskribapenArea.setEditable(false);
+        deskribapenArea.setFocusable(false);
+        deskribapenArea.setAlignmentX(Component.CENTER_ALIGNMENT);
+        deskribapenArea.setBorder(null);
+        deskribapenArea.setForeground(Color.GRAY);
+        hutsikEgoeraPanela.add(deskribapenArea, gbc);
+        gbc.gridy++;
+
+        JButton gehituBidaiaBotoia = new JButton("Gehitu Bidaia");
+        gehituBidaiaBotoia.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        gehituBidaiaBotoia.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JOptionPane.showMessageDialog(historialLehioa, "Bidaia berria gehitzeko funtzionalitatea hemen joango litzateke.", "Ekintza", JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
+        hutsikEgoeraPanela.add(gehituBidaiaBotoia, gbc);
+
+        historialTxartelPanela.add(hutsikEgoeraPanela, HUTSIK_EGOERA_TXARTELA);
+
+        DefaultTableModel historialModelo = new DefaultTableModel(new Object[][]{}, new String[]{
+                "Bidaia ID", "Gidari NAN", "Erabiltzaile NAN", "Data", "Ordua", "Pertsona kopurua", "Hasiera", "Helmuga"
+        });
+
+        JPanel taulaBistaPanela = new JPanel(new BorderLayout(10, 10));
+        taulaBistaPanela.setBorder(new EmptyBorder(10, 10, 10, 10));
+
+        JPanel historialGoikoPanel = new JPanel(new BorderLayout(10, 10));
+        JLabel historialTitleLabel = new JLabel("Bidaia Historiala", JLabel.LEFT);
+        historialTitleLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        historialGoikoPanel.add(historialTitleLabel, BorderLayout.WEST);
+
+        JTextField historialBilatzailea = new JTextField();
+        historialBilatzailea.setToolTipText("Bilatu historialeko datuak (adibidez: data, hasiera, helmuga...)");
+        historialGoikoPanel.add(historialBilatzailea, BorderLayout.CENTER);
+        taulaBistaPanela.add(historialGoikoPanel, BorderLayout.NORTH);
+
+        JTable historialTaula = new JTable(historialModelo);
+        historialTaula.setFillsViewportHeight(true);
+        historialTaula.setDefaultEditor(Object.class, null);
+        JScrollPane scrollPane = new JScrollPane(historialTaula);
+        taulaBistaPanela.add(scrollPane, BorderLayout.CENTER);
+
+        TableRowSorter<DefaultTableModel> historialSorter = new TableRowSorter<>(historialModelo);
+        historialTaula.setRowSorter(historialSorter);
+
+        historialBilatzailea.getDocument().addDocumentListener(new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) {
+                filtratuHistoriala(historialBilatzailea.getText(), historialSorter);
+            }
+            public void removeUpdate(DocumentEvent e) {
+                filtratuHistoriala(historialBilatzailea.getText(), historialSorter);
+            }
+            public void changedUpdate(DocumentEvent e) {
+                filtratuHistoriala(historialBilatzailea.getText(), historialSorter);
+            }
+        });
+
+        historialTxartelPanela.add(taulaBistaPanela, TAULA_BISTA_TXARTELA);
+
+        ActionListener datuakKargatuEtaEguneratu = new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                new SwingWorker<List<Object>, Void>() {
+                    private final String driverNAN = NAN;
+                    private final DefaultTableModel model = historialModelo;
+                    private final JFrame parentFrame = historialLehioa;
+                    private final CardLayout cardLayout = historialTxartelDiseinua;
+                    private final JPanel cardPanel = historialTxartelPanela;
+
+                    @Override
+                    protected List<Object> doInBackground() throws Exception {
+                        List<Object> data = new ArrayList<>();
+                        ResultSet rs = null;
+                        try {
+                            rs = DBGestorea.getHistorikoak(driverNAN);
+                            while (rs != null && rs.next()) {
+                                Object[] row = new Object[]{
+                                    rs.getInt("Bidaia_id"),
+                                    rs.getString("Gidari_nan"),
+                                    rs.getString("erabiltzaile_nan"),
+                                    rs.getDate("data"),
+                                    rs.getTime("ordua"),
+                                    rs.getString("pertsona_kopurua"),
+                                    rs.getString("hasiera"),
+                                    rs.getString("helmuga")
+                                };
+                                data.add(row);
+                            }
+                        } finally {
+                            if (rs != null) try { rs.close(); } catch (SQLException ex) { ex.printStackTrace(); }
+                        }
+                        return data;
+                    }
+
+                    @Override
+                    protected void done() {
+                        try {
+                            List<Object> newData = get();
+                            if (newData.isEmpty()) {
+                                cardLayout.show(cardPanel, HUTSIK_EGOERA_TXARTELA);
+                            } else {
+                                model.setRowCount(0);
+                                for (Object row : newData) {
+                                    model.addRow((Object[]) row);
+                                }
+                                cardLayout.show(cardPanel, TAULA_BISTA_TXARTELA);
+                            }
+                        } catch (InterruptedException | ExecutionException ex) {
+                            ex.printStackTrace();
+                            Throwable cause = ex.getCause();
+                            String errorMessage = "Errorea historialeko datuak eguneratzean.";
+                            if (cause != null) errorMessage += " Kausa: " + cause.getMessage();
+                            JOptionPane.showMessageDialog(parentFrame, errorMessage, "Errorea", JOptionPane.ERROR_MESSAGE);
+                            cardLayout.show(cardPanel, HUTSIK_EGOERA_TXARTELA);
+                        }
+                    }
+                }.execute();
+            }
+        };
+
+        datuakKargatuEtaEguneratu.actionPerformed(null);
+
+        final Timer historialLeihoRefreshTimer = new Timer(10000, datuakKargatuEtaEguneratu);
+        historialLeihoRefreshTimer.start();
+
+        historialLehioa.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent e) {
+                historialLeihoRefreshTimer.stop();
+            }
+        });
+
+        historialLehioa.setVisible(true);
     }
 
-    /**
-     * Historialeko taula filtratzeko funtzioa.
-     * @param testua Bilatzailean sartutako testua
-     * @param sorter Taulako RowSorter-a
-     */
-    private void filtratuHistoriala(String testua, TableRowSorter<DefaultTableModel> sorter) {
-        String bilatu = testua.toLowerCase();
-        if (bilatu.trim().length() == 0) {
-            sorter.setRowFilter(null); // Ez dago testurik, ezabatu iragazkia
-        } else {
-            sorter.setRowFilter(RowFilter.regexFilter("(?i)" + bilatu)); // Iragazki insensitive
-        }
+    private void filtratuHistoriala(String text, TableRowSorter<DefaultTableModel> sorter) {
+        if (text.trim().length() == 0)
+            sorter.setRowFilter(null);
+        else
+            sorter.setRowFilter(RowFilter.regexFilter("(?i)" + text));
     }
+
 }
