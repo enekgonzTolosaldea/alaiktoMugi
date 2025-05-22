@@ -69,30 +69,6 @@ public class GidariLehioa extends JFrame
 		topPanel.add(bilatzailea, BorderLayout.CENTER);
 		edukiontzia.add(topPanel, BorderLayout.NORTH);
 
-//		int				delay			= 15000;										// 15
-//																						// segundos
-//																						// en
-//																						// milisegundos
-//
-//		ActionListener	refreshTable	= new ActionListener()
-//										{
-//
-//											@Override
-//											public void actionPerformed(ActionEvent e)
-//											{
-//												try
-//												{
-//													gidariakBistaratu();
-//												}
-//												catch (SQLException ex)
-//												{
-//													ex.printStackTrace();
-//												}
-//											}
-//
-//										};
-//
-//		new Timer(delay, refreshTable).start();
 		// Taula
 		modelo = new DefaultTableModel(new Object[]
 		{
@@ -437,17 +413,17 @@ public class GidariLehioa extends JFrame
 	}
 
 	/**
-	 * @param egoera
-	 * @param nanField
-	 * @param izenaField
-	 * @param abizenaField
-	 * @param postaField
-	 * @param tel_zenbField
-	 * @param passField
-	 * @param kokapenaField
-	 * @param lekuaField
-	 * @param matrikulaField
-	 * @param panel
+	 * @param egoera         Egoera pasatzeko(Egoera.Gehitu, Egoera.Ezabatu)
+	 * @param nanField       Nan inputean sartutako testua pasatzeko
+	 * @param izenaField     Izena inputean sartutako testua pasatzeko
+	 * @param abizenaField   Abziena inputean sartutako testua pasatzeko
+	 * @param postaField     Posta inputean sartutako testua pasatzeko
+	 * @param tel_zenbField  Telefono zenbakia inputean sartutako testua pasatzeko
+	 * @param passField      Pasahitza inputean sartutako testua pasatzeko
+	 * @param kokapenaField  Kokapena inputean sartutako testua pasatzeko
+	 * @param lekuaField     Lan Lekua inputean sartutako testua pasatzeko
+	 * @param matrikulaField Martikula inputean sartutako testua pasatzeko
+	 * @param panel          panela pasatzeko
 	 */
 	public void balidazioa(Egoera mota, JTextField nanField, JTextField izenaField, JTextField abizenaField, JTextField postaField, JTextField tel_zenbField, JTextField passField, JTextField kokapenaField, JTextField lekuaField, JTextField matrikulaField, JPanel panel)
 	{
@@ -579,6 +555,10 @@ public class GidariLehioa extends JFrame
 		}
 	}
 
+	/**
+	 * @param  NAN          aukeratutako errenkadaren NAN pasatzeko
+	 * @throws SQLException erroreak badaude saltatzeko
+	 */
 	private void gidarienBidaiakBistaratu(String NAN) throws SQLException
 	{
 		historialaModeloa.setRowCount(0);
