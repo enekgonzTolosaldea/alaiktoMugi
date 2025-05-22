@@ -30,9 +30,10 @@ public class GidariLehioa extends JFrame
 	private JTextField							bilatzaileHistoriala;
 	private TableRowSorter<DefaultTableModel>	sorter;
 	private TableRowSorter<DefaultTableModel>	historialaSorter;
-	private Timer								historialTimer;			// Timer para el refresco
-																		// del historial
-	private String								historialaNAN	= null;
+	private Timer								historialTimer;					// Timer único para
+																				// refresco
+	private String								historialaNAN			= null;
+	private JFrame								historialLehioaAktiboa	= null;
 
 	public enum Egoera
 	{
@@ -68,6 +69,30 @@ public class GidariLehioa extends JFrame
 		topPanel.add(bilatzailea, BorderLayout.CENTER);
 		edukiontzia.add(topPanel, BorderLayout.NORTH);
 
+//		int				delay			= 15000;										// 15
+//																						// segundos
+//																						// en
+//																						// milisegundos
+//
+//		ActionListener	refreshTable	= new ActionListener()
+//										{
+//
+//											@Override
+//											public void actionPerformed(ActionEvent e)
+//											{
+//												try
+//												{
+//													gidariakBistaratu();
+//												}
+//												catch (SQLException ex)
+//												{
+//													ex.printStackTrace();
+//												}
+//											}
+//
+//										};
+//
+//		new Timer(delay, refreshTable).start();
 		// Taula
 		modelo = new DefaultTableModel(new Object[]
 		{
@@ -97,22 +122,30 @@ public class GidariLehioa extends JFrame
 		}
 		catch (SQLException e)
 		{
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 
-		// Eliminar este WindowFocusListener, ya que el historial tendrá su propio timer.
-		// this.addWindowFocusListener(new WindowAdapter() {
-		// @Override
-		// public void windowGainedFocus(WindowEvent e) {
-		// if (historialaNAN != null && historialaModeloa != null) {
-		// try {
-		// gidarienBidaiakBistaratu(historialaNAN);
-		// } catch (SQLException ex) {
-		// ex.printStackTrace();
-		// }
-		// }
-		// }
-		// });
+		this.addWindowFocusListener(new WindowAdapter()
+		{
+
+			@Override
+			public void windowGainedFocus(WindowEvent e)
+			{
+				if (historialaNAN != null && historialaModeloa != null)
+				{
+					try
+					{
+						gidarienBidaiakBistaratu(historialaNAN);
+					}
+					catch (SQLException ex)
+					{
+						ex.printStackTrace();
+					}
+				}
+			}
+
+		});
 
 		taula.addMouseListener(new MouseAdapter()
 		{
@@ -122,6 +155,11 @@ public class GidariLehioa extends JFrame
 			{
 				if (evt.getClickCount() == 2)
 				{
+					if (historialLehioaAktiboa != null && historialLehioaAktiboa.isDisplayable())
+					{
+						JOptionPane.showMessageDialog(GidariLehioa.this, "Dagoeneko historialaren leiho bat irekita dago.", "Abisua", JOptionPane.WARNING_MESSAGE);
+						return;
+					}
 					// bi aldiz clickatzerakoan
 					int row = taula.getSelectedRow();
 
@@ -129,30 +167,43 @@ public class GidariLehioa extends JFrame
 						return;
 					int modeloRow = taula.convertRowIndexToModel(row);
 					historialaNAN = modelo.getValueAt(modeloRow, 0).toString();
+//						System.out.println(NAN);
 
-					JFrame historialLehioa = new JFrame("Erabiltzailearen Historiala (" + historialaNAN + ")");
-					historialLehioa.setSize(800, 500);
-					historialLehioa.setLocationRelativeTo(null);
-					historialLehioa.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+					historialLehioaAktiboa = new JFrame("Erabiltzailearen Historiala (" + historialaNAN + ")");
+					historialLehioaAktiboa.setSize(800, 500);
+					historialLehioaAktiboa.setLocationRelativeTo(null);
+					historialLehioaAktiboa.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-					JPanel edukiontziaHistorial = new JPanel(new BorderLayout(10, 10)); // Renombrado
-																						// para
-																						// evitar
-																						// conflicto
-					edukiontziaHistorial.setBorder(new EmptyBorder(10, 10, 10, 10));
-					historialLehioa.setContentPane(edukiontziaHistorial);
+					historialLehioaAktiboa.addWindowListener(new WindowAdapter()
+					{
 
-// GOIKO PANELA
-					JPanel	topPanelHistorial	= new JPanel(new BorderLayout(10, 10));			
-					JLabel	lblHistorial		= new JLabel("Bidaia Historiala", JLabel.LEFT);	
-					lblHistorial.setFont(new Font("Segoe UI", Font.BOLD, 20));
-					topPanelHistorial.add(lblHistorial, BorderLayout.WEST);
+						@Override
+						public void windowClosed(WindowEvent e)
+						{
+							if (historialTimer != null)
+							{
+								historialTimer.stop();
+							}
+							historialLehioaAktiboa = null;
+						}
+
+					});
+
+					JPanel edukiontzia = new JPanel(new BorderLayout(10, 10));
+					edukiontzia.setBorder(new EmptyBorder(10, 10, 10, 10));
+					historialLehioaAktiboa.setContentPane(edukiontzia);
+
+					// Panel superior con título y campo de búsqueda
+					JPanel	topPanel	= new JPanel(new BorderLayout(10, 10));
+					JLabel	lbl			= new JLabel("Bidaia Historiala", JLabel.LEFT);
+					lbl.setFont(new Font("Segoe UI", Font.BOLD, 20));
+					topPanel.add(lbl, BorderLayout.WEST);
 
 					bilatzaileHistoriala = new JTextField();
 					bilatzaileHistoriala.setToolTipText("Bilatu izena edo abizena...");
-					topPanelHistorial.add(bilatzaileHistoriala, BorderLayout.CENTER);
+					topPanel.add(bilatzaileHistoriala, BorderLayout.CENTER);
 
-					edukiontziaHistorial.add(topPanelHistorial, BorderLayout.NORTH);
+					edukiontzia.add(topPanel, BorderLayout.NORTH);
 
 					historialaModeloa = new DefaultTableModel(new Object[]
 					{
@@ -164,7 +215,7 @@ public class GidariLehioa extends JFrame
 					historialTaula.setDefaultEditor(Object.class, null);
 					historialTaula.setRowHeight(30);
 					JScrollPane histScroll = new JScrollPane(historialTaula);
-					edukiontziaHistorial.add(histScroll, BorderLayout.CENTER);
+					edukiontzia.add(histScroll, BorderLayout.CENTER);
 
 					try
 					{
@@ -195,52 +246,30 @@ public class GidariLehioa extends JFrame
 
 					});
 
-					int				delay					= 5000;																					// 5
-																																					// segundos
-																																					// en
-																																					// milisegundos
+					historialLehioaAktiboa.setVisible(true);
 
-					ActionListener	refreshHistorialTable	= new ActionListener()
-															{
+					if (historialTimer != null && historialTimer.isRunning())
+					{
+						historialTimer.stop(); // Detener si ya había un Timer corriendo
+					}
 
-																@Override
-																public void actionPerformed(ActionEvent e)
-																{
-																	if (historialaNAN != null && historialaModeloa != null)
-																	{
-																		try
-																		{
-																			gidarienBidaiakBistaratu(historialaNAN);
-																		}
-																		catch (SQLException ex)
-																		{
-																			ex.printStackTrace();
-																		}
-																	}
-																}
-
-															};
-
-					historialTimer = new Timer(delay, refreshHistorialTable);
-					historialTimer.start();
-
-					historialLehioa.addWindowListener(new WindowAdapter()
+					historialTimer = new Timer(10000, new ActionListener()
 					{
 
-						@Override
-						public void windowClosed(WindowEvent e)
+						public void actionPerformed(ActionEvent evt)
 						{
-							if (historialTimer != null && historialTimer.isRunning())
+							try
 							{
-								historialTimer.stop();
-								System.out.println("Historial Timer Stopped"); 
+								gidarienBidaiakBistaratu(historialaNAN);
 							}
-							historialaNAN = null; 
+							catch (SQLException ex)
+							{
+								ex.printStackTrace();
+							}
 						}
 
 					});
-
-					historialLehioa.setVisible(true);
+					historialTimer.start();
 				}
 			}
 
@@ -386,14 +415,17 @@ public class GidariLehioa extends JFrame
 				}
 				catch (SQLException e1)
 				{
+					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
 				try
 				{
+
 					gidariakBistaratu();
 				}
 				catch (SQLException e1)
 				{
+					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
 			}
@@ -526,18 +558,12 @@ public class GidariLehioa extends JFrame
 
 				try
 				{
-					// Actualizar la tabla principal de conductores después de una edición/adición
+
 					gidariakBistaratu();
-
-					// Si el historial está abierto, también refrescarlo
-					if (historialaNAN != null && historialaModeloa != null)
-					{
-						gidarienBidaiakBistaratu(historialaNAN);
-					}
-
 				}
 				catch (SQLException e)
 				{
+					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 				zuzena = true;
@@ -560,6 +586,8 @@ public class GidariLehioa extends JFrame
 		ResultSet rs = DB_Gidariak.getDatuakBidaiak(NAN);
 		while (rs.next())
 		{
+			;
+
 			String	gidariaNan			= rs.getString("Gidari_nan");
 			String	erabNAN				= rs.getString("erabiltzaile_nan");
 			Date	data				= rs.getDate("Data");
@@ -596,7 +624,6 @@ public class GidariLehioa extends JFrame
 			String	posta		= rs.getString("Posta");
 			String	tel_zenb	= rs.getString("Tel_zenb");
 			String	pass		= rs.getString("Pasahitza");
-
 			String	kokapena	= rs.getString("Kokapena");
 			String	lan_lekua	= rs.getString("Lan_Lekua");
 			String	Matrikula	= rs.getString("Matrikula");
