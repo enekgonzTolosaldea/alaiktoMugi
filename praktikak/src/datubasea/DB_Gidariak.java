@@ -74,6 +74,19 @@ public class DB_Gidariak
 
 		return rs1;
 	}
+	
+	public static ResultSet getGidariaNAN(String nan) throws SQLException
+	{
+
+		String				sql_check	= "SELECT * FROM gidaria WHERE NAN = ?";
+		PreparedStatement	stmt		= conn.prepareStatement(sql_check);
+		
+		stmt.setString(1, nan);
+
+		ResultSet			rs1			= stmt.executeQuery();
+
+		return rs1;
+	}
 
 	public static ResultSet getDatuakBidaiak(String nan) throws SQLException
 	{
@@ -87,9 +100,6 @@ public class DB_Gidariak
 		stmt.setString(1, nan);
 //		System.out.println(sql_check);
 		ResultSet			rs2			= stmt.executeQuery();
-
-	
-
 		return rs2;
 	}
 

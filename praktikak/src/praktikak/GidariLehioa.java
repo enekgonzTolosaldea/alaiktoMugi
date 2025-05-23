@@ -30,8 +30,12 @@ public class GidariLehioa extends JFrame
 	private JTextField							bilatzaileHistoriala;
 	private TableRowSorter<DefaultTableModel>	sorter;
 	private TableRowSorter<DefaultTableModel>	historialaSorter;
-	private Timer								historialTimer;					// Timer único para
-																				// refresco
+	private Timer								historialTimer;					// Historial
+																				// taularentzako
+																				// timer-a
+	private Timer								mainTableTimer;					// Taula
+																				// nagusiarentzako
+																				// timer-a
 	private String								historialaNAN			= null;
 	private JFrame								historialLehioaAktiboa	= null;
 
@@ -72,12 +76,12 @@ public class GidariLehioa extends JFrame
 		// Taula
 		modelo = new DefaultTableModel(new Object[]
 		{
-				"NAN", "Izena", "Abizena", "Posta", "Telefono zenbakia", "Pasahitza", "Kokapena", "Lan lekua", "Matrikula"
+				"NAN", "Izena", "Abizena", "Posta", "Telefono zenbakia", "Kokapena", "Lan lekua", "Matrikula"
 		}, 0);
 		taula = new JTable(modelo);
 		sorter = new TableRowSorter<>(modelo);
 		taula.setRowSorter(sorter);
-		sorter.setSortable(5, false);
+		sorter.setSortable(5, false); // No sortable for password column
 		JScrollPane scrollPane = new JScrollPane(taula);
 		edukiontzia.add(scrollPane, BorderLayout.CENTER);
 		taula.setDefaultEditor(Object.class, null);
@@ -91,6 +95,27 @@ public class GidariLehioa extends JFrame
 		{
 			taula.getColumnModel().getColumn(i).setCellRenderer(renderer);
 		}
+
+		mainTableTimer = new Timer(5000, new ActionListener()
+		{ // Refrescar cada 5 segundos
+
+			@Override
+			public void actionPerformed(ActionEvent e)
+			{
+				try
+				{
+					gidariakBistaratu();
+				}
+				catch (SQLException ex)
+				{
+					ex.printStackTrace();
+					JOptionPane.showMessageDialog(GidariLehioa.this, "Errorea gidarien datuak eguneratzean: " + ex.getMessage(), "Datu-base errorea", JOptionPane.ERROR_MESSAGE);
+				}
+			}
+
+		});
+		mainTableTimer.start(); // Iniciar el timer
+
 		// Datu baseko gidarien datuak bistaratzeko
 		try
 		{
@@ -98,8 +123,8 @@ public class GidariLehioa extends JFrame
 		}
 		catch (SQLException e)
 		{
-			// TODO Auto-generated catch block
 			e.printStackTrace();
+			JOptionPane.showMessageDialog(this, "Errorea gidarien datuak kargatzean: " + e.getMessage(), "Datu-base errorea", JOptionPane.ERROR_MESSAGE);
 		}
 
 		this.addWindowFocusListener(new WindowAdapter()
@@ -108,6 +133,16 @@ public class GidariLehioa extends JFrame
 			@Override
 			public void windowGainedFocus(WindowEvent e)
 			{
+				// Cuando la ventana principal obtiene el foco, actualiza también su contenido
+				try
+				{
+					gidariakBistaratu();
+				}
+				catch (SQLException ex)
+				{
+					ex.printStackTrace();
+				}
+
 				if (historialaNAN != null && historialaModeloa != null)
 				{
 					try
@@ -118,6 +153,20 @@ public class GidariLehioa extends JFrame
 					{
 						ex.printStackTrace();
 					}
+				}
+			}
+
+			@Override
+			public void windowClosed(WindowEvent e)
+			{
+				// Asegúrate de detener los timers cuando la ventana se cierra
+				if (mainTableTimer != null && mainTableTimer.isRunning())
+				{
+					mainTableTimer.stop();
+				}
+				if (historialTimer != null && historialTimer.isRunning())
+				{
+					historialTimer.stop();
 				}
 			}
 
@@ -143,7 +192,7 @@ public class GidariLehioa extends JFrame
 						return;
 					int modeloRow = taula.convertRowIndexToModel(row);
 					historialaNAN = modelo.getValueAt(modeloRow, 0).toString();
-//						System.out.println(NAN);
+//                        System.out.println(NAN);
 
 					historialLehioaAktiboa = new JFrame("Erabiltzailearen Historiala (" + historialaNAN + ")");
 					historialLehioaAktiboa.setSize(800, 500);
@@ -176,14 +225,14 @@ public class GidariLehioa extends JFrame
 					topPanel.add(lbl, BorderLayout.WEST);
 
 					bilatzaileHistoriala = new JTextField();
-					bilatzaileHistoriala.setToolTipText("Bilatu izena edo abizena...");
+					bilatzaileHistoriala.setToolTipText("Bilatu...");
 					topPanel.add(bilatzaileHistoriala, BorderLayout.CENTER);
 
 					edukiontzia.add(topPanel, BorderLayout.NORTH);
 
 					historialaModeloa = new DefaultTableModel(new Object[]
 					{
-							"Gidaria NAN", "Gidari Izena", "Erabiltzaile NAN", "Erabiltzaile Izena", "Data", "Ordua", "Hasiera", "Helmuga"
+							"Gidaria NAN", "Gidari Izena", "Erabiltzaile NAN", "Erabiltzaile Izena", "Data", "Hasiera", "Helmuga"
 					}, 0);
 					historialTaula = new JTable(historialaModeloa);
 					historialaSorter = new TableRowSorter<>(historialaModeloa);
@@ -192,6 +241,15 @@ public class GidariLehioa extends JFrame
 					historialTaula.setRowHeight(30);
 					JScrollPane histScroll = new JScrollPane(historialTaula);
 					edukiontzia.add(histScroll, BorderLayout.CENTER);
+
+					DefaultTableCellRenderer renderer = new DefaultTableCellRenderer();
+					renderer.setHorizontalAlignment(JLabel.CENTER); // testua zentratzeko
+					renderer.setBorder(new EmptyBorder(10, 10, 10, 10)); // Añade padding interno
+
+					for (int i = 0; i < historialTaula.getColumnCount(); i++)
+					{
+						historialTaula.getColumnModel().getColumn(i).setCellRenderer(renderer);
+					}
 
 					try
 					{
@@ -226,7 +284,7 @@ public class GidariLehioa extends JFrame
 
 					if (historialTimer != null && historialTimer.isRunning())
 					{
-						historialTimer.stop(); // Detener si ya había un Timer corriendo
+						historialTimer.stop(); // timer bat martzan badago amaitzeko
 					}
 
 					historialTimer = new Timer(10000, new ActionListener()
@@ -241,6 +299,7 @@ public class GidariLehioa extends JFrame
 							catch (SQLException ex)
 							{
 								ex.printStackTrace();
+								JOptionPane.showMessageDialog(historialLehioaAktiboa, "Errorea historialaren datuak eguneratzean: " + ex.getMessage(), "Datu-base errorea", JOptionPane.ERROR_MESSAGE);
 							}
 						}
 
@@ -284,13 +343,11 @@ public class GidariLehioa extends JFrame
 
 		// Gehitu
 		btnGehitu.addActionListener(e -> {
-
 			JTextField	nanField		= new JTextField();
 			JTextField	izenaField		= new JTextField();
 			JTextField	abizenaField	= new JTextField();
 			JTextField	postaField		= new JTextField();
 			JTextField	tel_zenbField	= new JTextField();
-			JTextField	passField		= new JTextField();
 			JTextField	kokapenaField	= new JTextField();
 			JTextField	lekuaField		= new JTextField();
 			JTextField	matrikulaField	= new JTextField();
@@ -298,6 +355,7 @@ public class GidariLehioa extends JFrame
 			JPanel		panel			= new JPanel(new GridLayout(9, 2));
 			panel.add(new JLabel("NAN:"));
 			panel.add(nanField);
+			
 			panel.add(new JLabel("Izena:"));
 			panel.add(izenaField);
 			panel.add(new JLabel("Abizena:"));
@@ -306,8 +364,6 @@ public class GidariLehioa extends JFrame
 			panel.add(postaField);
 			panel.add(new JLabel("Telefono zenbakia:"));
 			panel.add(tel_zenbField);
-			panel.add(new JLabel("Pasahitza:"));
-			panel.add(passField);
 			panel.add(new JLabel("Kokapena:"));
 			panel.add(kokapenaField);
 			panel.add(new JLabel("Lan lekua:"));
@@ -315,59 +371,74 @@ public class GidariLehioa extends JFrame
 			panel.add(new JLabel("Matrikula:"));
 			panel.add(matrikulaField);
 
-			balidazioa(Egoera.Gehitu, nanField, izenaField, abizenaField, postaField, tel_zenbField, passField, kokapenaField, lekuaField, matrikulaField, panel);
-
+			balidazioa(Egoera.Gehitu, nanField, izenaField, abizenaField, postaField, tel_zenbField, kokapenaField, lekuaField, matrikulaField, panel);
 		});
 
 		// Editatu
 		btnEditatu.addActionListener(e -> {
 			int selectedRow = taula.getSelectedRow();
-			System.out.println(selectedRow);
 			if (selectedRow >= 0)
 			{
-				String		nan				= (String) modelo.getValueAt(selectedRow, 0);
-				String		izena			= (String) modelo.getValueAt(selectedRow, 1);
-				String		abizena			= (String) modelo.getValueAt(selectedRow, 2);
-				String		posta			= (String) modelo.getValueAt(selectedRow, 3);
-				String		tel_zenb		= (String) modelo.getValueAt(selectedRow, 4);
-				String		pasahitza		= (String) modelo.getValueAt(selectedRow, 5);
-				String		kokapena		= (String) modelo.getValueAt(selectedRow, 6);
-				String		lan_lekua		= (String) modelo.getValueAt(selectedRow, 7);
-				String		matrikula		= (String) modelo.getValueAt(selectedRow, 8);
+				// filtroa badago aukeratutako lerroa modelora gehitzeko
+				int		modelRow	= taula.convertRowIndexToModel(selectedRow);
+				String	nanAukera	= (String) modelo.getValueAt(modelRow, 0);
 
-				JTextField	nanField		= new JTextField(nan);
-				JTextField	izenaField		= new JTextField(izena);
-				JTextField	abizenaField	= new JTextField(abizena);
-				JTextField	postaField		= new JTextField(posta);
-				JTextField	tel_zenbField	= new JTextField(tel_zenb);
-				JTextField	passField		= new JTextField(pasahitza);
-				JTextField	kokapenaField	= new JTextField(kokapena);
-				JTextField	lekuaField		= new JTextField(lan_lekua);
-				JTextField	matrikulaField	= new JTextField(matrikula);
+				try (ResultSet rs = DB_Gidariak.getGidariaNAN(nanAukera))
+				{
+					if (rs.next())
+					{
+						String		nan				= rs.getString("NAN");
+						String		izena			= rs.getString("Izena");
+						String		abizena			= rs.getString("Abizena");
+						String		posta			= rs.getString("Posta");
+						String		tel_zenb		= rs.getString("Tel_zenb");
+						String		kokapena		= rs.getString("Kokapena");
+						String		lan_lekua		= rs.getString("Lan_Lekua");
+						String		matrikula		= rs.getString("Matrikula");
 
-				nanField.setEditable(false);
+						JTextField	nanField		= new JTextField(nan);
+						JTextField	izenaField		= new JTextField(izena);
+						JTextField	abizenaField	= new JTextField(abizena);
+						JTextField	postaField		= new JTextField(posta);
+						JTextField	tel_zenbField	= new JTextField(tel_zenb);
+						JTextField	kokapenaField	= new JTextField(kokapena);
+						JTextField	lekuaField		= new JTextField(lan_lekua);
+						JTextField	matrikulaField	= new JTextField(matrikula);
 
-				JPanel panel = new JPanel(new GridLayout(9, 2));
-				panel.add(new JLabel("NAN:"));
-				panel.add(nanField);
-				panel.add(new JLabel("Izena:"));
-				panel.add(izenaField);
-				panel.add(new JLabel("Abizena:"));
-				panel.add(abizenaField);
-				panel.add(new JLabel("Posta:"));
-				panel.add(postaField);
-				panel.add(new JLabel("Telefono zenbakia:"));
-				panel.add(tel_zenbField);
-				panel.add(new JLabel("Pasahitza:"));
-				panel.add(passField);
-				panel.add(new JLabel("Kokapena:"));
-				panel.add(kokapenaField);
-				panel.add(new JLabel("Lan lekua:"));
-				panel.add(lekuaField);
-				panel.add(new JLabel("Matrikula:"));
-				panel.add(matrikulaField);
+						nanField.setEditable(false); // nan-a editatzeko aukera kentzeko
 
-				balidazioa(Egoera.Editatu, nanField, izenaField, abizenaField, postaField, tel_zenbField, passField, kokapenaField, lekuaField, matrikulaField, panel);
+						JPanel panel = new JPanel(new GridLayout(9, 2));
+						panel.add(new JLabel("NAN:"));
+						panel.add(nanField);
+						panel.add(new JLabel("Izena:"));
+						panel.add(izenaField);
+						panel.add(new JLabel("Abizena:"));
+						panel.add(abizenaField);
+						panel.add(new JLabel("Posta:"));
+						panel.add(postaField);
+						panel.add(new JLabel("Telefono zenbakia:"));
+						panel.add(tel_zenbField);
+						panel.add(new JLabel("Kokapena:"));
+						panel.add(kokapenaField);
+						panel.add(new JLabel("Lan lekua:"));
+						panel.add(lekuaField);
+						panel.add(new JLabel("Matrikula:"));
+						panel.add(matrikulaField);
+
+						balidazioa(Egoera.Editatu, nanField, izenaField, abizenaField, postaField, tel_zenbField, kokapenaField, lekuaField, matrikulaField, panel);
+
+					}
+					else
+					{
+						JOptionPane.showMessageDialog(this, "Aukeratutako gidaria ez da aurkitu datu-basean. Agian ezabatu egin da.", "Errorea", JOptionPane.ERROR_MESSAGE);
+						gidariakBistaratu(); // ez bada existitzen datu basea eguneratzeko
+					}
+				}
+				catch (SQLException ex)
+				{
+					ex.printStackTrace();
+					JOptionPane.showMessageDialog(this, "Errorea gidariaren datuak kargatzean: " + ex.getMessage(), "Datu-base errorea", JOptionPane.ERROR_MESSAGE);
+				}
 
 			}
 			else
@@ -381,28 +452,25 @@ public class GidariLehioa extends JFrame
 			int selectedRow = taula.getSelectedRow();
 			if (selectedRow >= 0)
 			{
+				// filtroa badago aukeratutako lerroa modelora gehitzeko
+				int		modelRow	= taula.convertRowIndexToModel(selectedRow);
+				String	nan			= (String) modelo.getValueAt(modelRow, 0);
 
-				String nan = (String) modelo.getValueAt(selectedRow, 0);
+				int		confirm		= JOptionPane.showConfirmDialog(this, "Ziur zaude " + nan + " gidaria ezabatu nahi duzula?", "Ezabatu gidaria", JOptionPane.YES_NO_OPTION);
 
-				System.out.println(nan);
-				try
+				if (confirm == JOptionPane.YES_OPTION)
 				{
-					DB_Gidariak.deleteGidaria(nan);
-				}
-				catch (SQLException e1)
-				{
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-				try
-				{
-
-					gidariakBistaratu();
-				}
-				catch (SQLException e1)
-				{
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
+					try
+					{
+						DB_Gidariak.deleteGidaria(nan);
+						JOptionPane.showMessageDialog(this, "Gidaria ondo ezabatu da.", "Arrakasta", JOptionPane.INFORMATION_MESSAGE);
+						gidariakBistaratu(); // datuak borratu ondoren taula eguneratzeko
+					}
+					catch (SQLException e1)
+					{
+						e1.printStackTrace();
+						JOptionPane.showMessageDialog(this, "Errorea gidaria ezabatzean: " + e1.getMessage(), "Datu-base errorea", JOptionPane.ERROR_MESSAGE);
+					}
 				}
 			}
 			else
@@ -419,24 +487,22 @@ public class GidariLehioa extends JFrame
 	 * @param abizenaField   Abziena inputean sartutako testua pasatzeko
 	 * @param postaField     Posta inputean sartutako testua pasatzeko
 	 * @param tel_zenbField  Telefono zenbakia inputean sartutako testua pasatzeko
-	 * @param passField      Pasahitza inputean sartutako testua pasatzeko
 	 * @param kokapenaField  Kokapena inputean sartutako testua pasatzeko
 	 * @param lekuaField     Lan Lekua inputean sartutako testua pasatzeko
 	 * @param matrikulaField Martikula inputean sartutako testua pasatzeko
 	 * @param panel          panela pasatzeko
 	 */
-	public void balidazioa(Egoera mota, JTextField nanField, JTextField izenaField, JTextField abizenaField, JTextField postaField, JTextField tel_zenbField, JTextField passField, JTextField kokapenaField, JTextField lekuaField, JTextField matrikulaField, JPanel panel)
+	public void balidazioa(Egoera mota, JTextField nanField, JTextField izenaField, JTextField abizenaField, JTextField postaField, JTextField tel_zenbField, JTextField kokapenaField, JTextField lekuaField, JTextField matrikulaField, JPanel panel)
 	{
 		boolean zuzena = false;
 
 		while (!zuzena)
 		{
-
-			int result = JOptionPane.showConfirmDialog(this, panel, "Erabiltzaile berria", JOptionPane.OK_CANCEL_OPTION);
+			int result = JOptionPane.showConfirmDialog(this, panel, (mota == Egoera.Gehitu ? "Gidari berria" : "Editatu gidaria"), JOptionPane.OK_CANCEL_OPTION);
 
 			if (result != JOptionPane.OK_OPTION)
 			{
-				break;
+				break; // erabiltzaileak ezestatzen duenean
 			}
 
 			Border defaultBorder = UIManager.getLookAndFeel().getDefaults().getBorder("TextField.border");
@@ -447,7 +513,6 @@ public class GidariLehioa extends JFrame
 			abizenaField.setBorder(defaultBorder);
 			postaField.setBorder(defaultBorder);
 			tel_zenbField.setBorder(defaultBorder);
-			passField.setBorder(defaultBorder);
 			kokapenaField.setBorder(defaultBorder);
 			lekuaField.setBorder(defaultBorder);
 			matrikulaField.setBorder(defaultBorder);
@@ -457,12 +522,12 @@ public class GidariLehioa extends JFrame
 			Border			Gorria		= BorderFactory.createLineBorder(Color.RED, 2);
 
 			// DATUAK BALIDATZEKO
-			String			nan			= nanField.getText().trim();
+			String			nan			= nanField.getText().trim().toUpperCase();
 			String			izena		= izenaField.getText().trim();
 			String			abizena		= abizenaField.getText().trim();
-			String			posta		= postaField.getText().trim();
+			String			posta		= postaField.getText().trim().toLowerCase();
 			String			telefonoa	= tel_zenbField.getText().trim();
-			String			pasahitza	= passField.getText().trim();
+			String			pasahitza	= nanField.getText().trim().toUpperCase();
 			String			kokapena	= kokapenaField.getText().trim();
 			String			lekua		= lekuaField.getText().trim();
 			String			matrikula	= matrikulaField.getText().trim();
@@ -471,7 +536,7 @@ public class GidariLehioa extends JFrame
 			{
 				nanField.setBorder(Gorria);
 				error = true;
-				errorMsg.append("NAN ondo sartu \n");
+				errorMsg.append("NAN ondo sartu (8 digitu + 1 letra) \n");
 			}
 			if (!check(izena, Mota.izena))
 			{
@@ -501,57 +566,48 @@ public class GidariLehioa extends JFrame
 			{
 				matrikulaField.setBorder(Gorria);
 				error = true;
-				errorMsg.append("Matrikula \n");
+				errorMsg.append("Matrikula formatua ez da zuzena (4 digitu + 3 letra) \n");
 			}
 			if (!check(telefonoa, Mota.telf))
 			{
 				tel_zenbField.setBorder(Gorria);
 				error = true;
-				errorMsg.append("Telefono zenbakia \n");
+				errorMsg.append("Telefono zenbakia ez da zuzena (9 digitu) \n");
 			}
 			if (!check(posta, Mota.posta))
 			{
 				postaField.setBorder(Gorria);
 				error = true;
-				errorMsg.append("Posta \n");
+				errorMsg.append("Posta elektroniko formatua ez da zuzena \n");
 			}
 
 			if (error)
 			{
 				JOptionPane.showMessageDialog(this, errorMsg.toString(), "Errorea: ", JOptionPane.ERROR_MESSAGE);
-				continue;
+				continue; // Buklea berriro hasteko
 			}
+
 			try
 			{
 				if (mota == Egoera.Gehitu)
 				{
-					DB_Gidariak.addGidariak(nanField.getText(), izenaField.getText(), abizenaField.getText(), postaField.getText(), tel_zenbField.getText(), passField.getText(), kokapenaField.getText(), lekuaField.getText(), matrikulaField.getText());
+					DB_Gidariak.addGidariak(nan, izena, abizena, posta, telefonoa, pasahitza, kokapena, lekua, matrikula);
+					JOptionPane.showMessageDialog(this, "Gidaria ondo gehitu da.", "Arrakasta", JOptionPane.INFORMATION_MESSAGE);
 				}
 				else if (mota == Egoera.Editatu)
 				{
-					DB_Gidariak.editGidariak(nanField.getText(), izenaField.getText(), abizenaField.getText(), postaField.getText(), tel_zenbField.getText(), passField.getText(), kokapenaField.getText(), lekuaField.getText(), matrikulaField.getText());
+					DB_Gidariak.editGidariak(nan, izena, abizena, posta, telefonoa, pasahitza, kokapena, lekua, matrikula);
+					JOptionPane.showMessageDialog(this, "Gidaria ondo editatu da.", "Arrakasta", JOptionPane.INFORMATION_MESSAGE);
 				}
-
-				try
-				{
-
-					gidariakBistaratu();
-				}
-				catch (SQLException e)
-				{
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				zuzena = true;
-
+				gidariakBistaratu(); // datuak sartu edo eguneratu odnoren eguneratzeko
+				zuzena = true; // bukletik ateratzeko
 			}
 			catch (SQLException e1)
 			{
-				JOptionPane.showMessageDialog(this, e1.getMessage(), "Errorea: ", JOptionPane.ERROR_MESSAGE);
+				JOptionPane.showMessageDialog(this, "Datu-base errorea: " + e1.getMessage(), "Errorea: ", JOptionPane.ERROR_MESSAGE);
+				// SQL-an eerrore bat egon bada berriro egiteko adibidez NAN bikoiztua
 				continue;
 			}
-
-			break;
 		}
 	}
 
@@ -561,69 +617,113 @@ public class GidariLehioa extends JFrame
 	 */
 	private void gidarienBidaiakBistaratu(String NAN) throws SQLException
 	{
-		historialaModeloa.setRowCount(0);
+		// aukera eta bista gordetzeko
+		int	selectedRow		= historialTaula.getSelectedRow();
+		int	firstVisibleRow	= historialTaula.getVisibleRect().y / historialTaula.getRowHeight();
 
-		ResultSet rs = DB_Gidariak.getDatuakBidaiak(NAN);
-		while (rs.next())
+		historialaModeloa.setRowCount(0); // datu berriak gehitu aurretik taula garbitzeko
+
+		try (ResultSet rs = DB_Gidariak.getDatuakBidaiak(NAN))
 		{
-			;
-
-			String	gidariaNan			= rs.getString("Gidari_nan");
-			String	erabNAN				= rs.getString("erabiltzaile_nan");
-			Date	data				= rs.getDate("Data");
-			Time	ordua				= rs.getTime("hasiera_ordua");
-			String	hasiera				= rs.getString("hasiera");
-			String	helmuga				= rs.getString("helmuga");
-			String	gidariIzena			= rs.getString("gidari_izena");
-			String	gidariAbizena		= rs.getString("gidari_abizena");
-			String	erabiltzaileIzena	= rs.getString("erabiltzaile_izena");
-			String	erabiltzaileAbizena	= rs.getString("erabiltzaile_abizena");
-
-			String	erabIzena			= erabiltzaileIzena + " " + erabiltzaileAbizena;
-			String	gidIzena			= gidariIzena + " " + gidariAbizena;
-			historialaModeloa.addRow(new Object[]
+			while (rs.next())
 			{
-					gidariaNan, gidIzena, erabNAN, erabIzena, data, ordua, hasiera, helmuga
-			});
+				String	gidariaNan			= rs.getString("Gidari_nan");
+				String	erabNAN				= rs.getString("erabiltzaile_nan");
+				Date	data				= rs.getDate("Data");
+				Time	ordua				= rs.getTime("hasiera_ordua");
+				String	hasiera				= rs.getString("hasiera");
+				String	helmuga				= rs.getString("helmuga");
+				String	gidariIzena			= rs.getString("gidari_izena");
+				String	gidariAbizena		= rs.getString("gidari_abizena");
+				String	erabiltzaileIzena	= rs.getString("erabiltzaile_izena");
+				String	erabiltzaileAbizena	= rs.getString("erabiltzaile_abizena");
+
+				String	erabIzena			= erabiltzaileIzena + " " + erabiltzaileAbizena;
+				String	gidIzena			= gidariIzena + " " + gidariAbizena;
+				String	data2				= data + " " + ordua;
+				historialaModeloa.addRow(new Object[]
+				{
+						gidariaNan, gidIzena, erabNAN, erabIzena, data2, hasiera, helmuga
+				});
+			}
+			if (!rs.next())
+			{
+				JOptionPane.showMessageDialog(this, "Hutsik dago", "Oharturazpena: ", JOptionPane.INFORMATION_MESSAGE);
+				rs.close();
+				return;
+			}
+		}
+
+		// Restaurar la selección y la vista si es posible
+		if (selectedRow != -1 && selectedRow < historialTaula.getRowCount())
+		{
+			historialTaula.setRowSelectionInterval(selectedRow, selectedRow);
+			if (firstVisibleRow < historialTaula.getRowCount())
+			{
+				historialTaula.scrollRectToVisible(new Rectangle(0, firstVisibleRow * historialTaula.getRowHeight(), historialTaula.getWidth(), historialTaula.getRowHeight()));
+			}
 		}
 	}
 
-	// Gehitu erabiltzailea taulan
+	/**
+	 * Gidariak bistaratu eta taulan gehitzeko
+	 *
+	 * @throws SQLException
+	 */
 	private void gidariakBistaratu() throws SQLException
 	{
+		// aukera eta bista gordetzeko
+		int	selectedRow		= taula.getSelectedRow();
+		int	firstVisibleRow	= taula.getVisibleRect().y / taula.getRowHeight();
 
-		modelo.setRowCount(0);
+		modelo.setRowCount(0); // datu berriak gehitu aurretik taula garbitzeko
 
-		ResultSet rs = DB_Gidariak.getDatuak();
-
-		while (rs.next())
+		try (ResultSet rs = DB_Gidariak.getDatuak())
 		{
-			String	NAN			= rs.getString("NAN");
-			String	izena		= rs.getString("Izena");
-			String	abizena		= rs.getString("Abizena");
-			String	posta		= rs.getString("Posta");
-			String	tel_zenb	= rs.getString("Tel_zenb");
-			String	pass		= rs.getString("Pasahitza");
-			String	kokapena	= rs.getString("Kokapena");
-			String	lan_lekua	= rs.getString("Lan_Lekua");
-			String	Matrikula	= rs.getString("Matrikula");
-
-			modelo.addRow(new Object[]
+			while (rs.next())
 			{
-					NAN, izena, abizena, posta, tel_zenb, pass, kokapena, lan_lekua, Matrikula
-			});
+				String	NAN			= rs.getString("NAN");
+				String	izena		= rs.getString("Izena");
+				String	abizena		= rs.getString("Abizena");
+				String	posta		= rs.getString("Posta");
+				String	tel_zenb	= rs.getString("Tel_zenb");
+				String	kokapena	= rs.getString("Kokapena");
+				String	lan_lekua	= rs.getString("Lan_Lekua");
+				String	Matrikula	= rs.getString("Matrikula");
+
+				modelo.addRow(new Object[]
+				{
+						NAN, izena, abizena, posta, tel_zenb, kokapena, lan_lekua, Matrikula
+				});
+			}
 		}
 
+		// aukera eta bista reiniziatzeko
+		if (selectedRow != -1 && selectedRow < taula.getRowCount())
+		{
+			taula.setRowSelectionInterval(selectedRow, selectedRow);
+			if (firstVisibleRow < taula.getRowCount())
+			{
+				taula.scrollRectToVisible(new Rectangle(0, firstVisibleRow * taula.getRowHeight(), taula.getWidth(), taula.getRowHeight()));
+			}
+		}
+		filtratu(); // filtrorenbat badago berriro aplikatzeko
 	}
 
-	// Bilatu erabiltzaileak izenaren edo abizenaren arabera
+	/**
+	 * Bilatzaile nagusia funtzionatzeko
+	 */
 	private void filtratu()
 	{
 		String									bilatu	= bilatzailea.getText().toLowerCase();
+		// letra larria, xeheak eta Pattern.quote karakter bereziak ignoratzeko
 		RowFilter<DefaultTableModel, Object>	rf		= RowFilter.regexFilter("(?i)" + Pattern.quote(bilatu));
 		sorter.setRowFilter(rf);
 	}
 
+	/**
+	 * Bigarren bilatzailea funtzionatzeko
+	 */
 	private void filtratu2()
 	{
 		String									bilatu	= bilatzaileHistoriala.getText().toLowerCase();
@@ -631,15 +731,20 @@ public class GidariLehioa extends JFrame
 		historialaSorter.setRowFilter(rf);
 	}
 
+	/**
+	 * @param  testua egiaztatu nahi duzun testua pasatzeko
+	 * @param  Mota   egiaztatze testu mota (Mota.DNI, Mota.Matrikula, Mota.posta, Mota.telf,
+	 *                Mota.izena)
+	 * @return        egiaztapena betezen bada true bestela false
+	 */
 	public static boolean check(String testua, Mota Mota)
 	{
-
 		String regex = null;
 
 		if (Mota == Mota.DNI)
 			regex = "[0-9]{8}[A-Z]{1}";
 		if (Mota == Mota.Matrikula)
-			regex = "[0-9]{4}[A-Z]{3}";
+			regex = "[0-9]{4}[A-Z]{3}"; // Ej. 1234ABC
 		if (Mota == Mota.posta)
 			regex = "^[\\w\\.-]+@[\\w\\.-]+\\.[a-zA-Z]{2,}$";
 		if (Mota == Mota.telf)
