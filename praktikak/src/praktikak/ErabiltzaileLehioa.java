@@ -24,20 +24,23 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.RowFilter;
 
 /**
- * Erabiltzaileak kudeatzeko leiho nagusia. Leiho honek erabiltzaileen zerrenda
- * bistaratzen du eta haien historiala ikusteko aukera ematen du.
+ * Erabiltzaileak kudeatzeko leiho nagusia. Leiho honek erabiltzaileen zerrenda bistaratzen du eta
+ * haien historiala ikusteko aukera ematen du.
  */
 public class ErabiltzaileLehioa extends JFrame
 {
 
-	private DefaultTableModel					modelo;												// Taularen datuak
-																									// gordetzeko modelo
+	private DefaultTableModel					modelo;												// Taularen
+																									// datuak
+																									// gordetzeko
+																									// modelo
 	private JTable								taula;												// Erabiltzaileen
 																									// taula
 	private JTextField							bilatzailea;										// Bilaketa
 																									// testu-kutxa
 	private TableRowSorter<DefaultTableModel>	sorter;												// Taularen
-																									// iragazkia eta
+																									// iragazkia
+																									// eta
 																									// ordenatzailea
 	private Timer								historialRefreshTimer;								// Taula
 																									// automatikoki
@@ -61,7 +64,8 @@ public class ErabiltzaileLehioa extends JFrame
 		setSize(800, 600);
 		setResizable(false);
 		setLocationRelativeTo(null); // Zentratu pantailan
-		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Leiho hau ixterakoan, ez aplikazioa itxi
+		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE); // Leiho hau ixterakoan, ez aplikazioa
+															// itxi
 
 		// Edukiontzi nagusia konfiguratu (BorderLayout)
 		JPanel edukiontzia = new JPanel(new BorderLayout(10, 10));
@@ -127,16 +131,18 @@ public class ErabiltzaileLehioa extends JFrame
 		historialRefreshTimer.start();
 
 		// Taularen modelo eta konfigurazioa
-		modelo	= new DefaultTableModel(new Object[][] {}, new String[] {
+		modelo = new DefaultTableModel(new Object[][]
+		{}, new String[]
+		{
 				"NAN", "Izena", "Posta", "Telefono zenbakia"
 		});
-		taula	= new JTable(modelo);
+		taula = new JTable(modelo);
 		JScrollPane scrollPane = new JScrollPane(taula);
 		edukiontzia.add(scrollPane, BorderLayout.CENTER);
 
 		taula.setDefaultEditor(Object.class, null); // Taula ez editagarria
 		taula.setAutoCreateRowSorter(true); // Zutabeen izenetan klik egitean ordenatzeko
-
+		taula.setRowHeight(30);
 		// Taulako testua zentratu eta padding-a gehitu
 		DefaultTableCellRenderer renderer = new DefaultTableCellRenderer();
 		renderer.setHorizontalAlignment(JLabel.CENTER);
@@ -156,8 +162,7 @@ public class ErabiltzaileLehioa extends JFrame
 		catch (SQLException e)
 		{
 			e.printStackTrace();
-			JOptionPane.showMessageDialog(this, "Errorea erabiltzaileak kargatzean: " + e.getMessage(), "Errorea",
-					JOptionPane.ERROR_MESSAGE);
+			JOptionPane.showMessageDialog(this, "Errorea erabiltzaileak kargatzean: " + e.getMessage(), "Errorea", JOptionPane.ERROR_MESSAGE);
 		}
 
 		// Taulan doble klik egitean, erabiltzailearen historiala ireki
@@ -172,8 +177,10 @@ public class ErabiltzaileLehioa extends JFrame
 					int row = taula.getSelectedRow();
 					if (row != -1)
 					{ // Fila hautatu badu
-						int		modeloLerroa	= taula.convertRowIndexToModel(row);			// Ordenatuta badago,
-																								// modeloaren indizea
+						int		modeloLerroa	= taula.convertRowIndexToModel(row);			// Ordenatuta
+																								// badago,
+																								// modeloaren
+																								// indizea
 																								// lortu
 						String	NAN				= modelo.getValueAt(modeloLerroa, 0).toString();
 						ikusiHistoriala(NAN);
@@ -203,7 +210,8 @@ public class ErabiltzaileLehioa extends JFrame
 			while (rs.next())
 			{
 				String izena = rs.getString("Izena") + " " + rs.getString("Abizena");
-				modelo.addRow(new Object[] {
+				modelo.addRow(new Object[]
+				{
 						rs.getString("NAN"), izena, rs.getString("Posta"), rs.getString("Tel_zenb")
 				});
 			}
@@ -256,8 +264,7 @@ public class ErabiltzaileLehioa extends JFrame
 		// Egiaztatu ea historial leiho bat irekita dagoen jada
 		if (historialLehioaInstance != null && historialLehioaInstance.isVisible())
 		{
-			JOptionPane.showMessageDialog(this, "Historial leiho bat irekita dago jada.", "Oharra",
-					JOptionPane.WARNING_MESSAGE);
+			JOptionPane.showMessageDialog(this, "Historial leiho bat irekita dago jada.", "Oharra", JOptionPane.WARNING_MESSAGE);
 			historialLehioaInstance.toFront(); // Ekarri aurrera
 			return;
 		}
@@ -276,8 +283,7 @@ public class ErabiltzaileLehioa extends JFrame
 		catch (SQLException e)
 		{
 			e.printStackTrace();
-			JOptionPane.showMessageDialog(this, "Errorea historialeko datuak egiaztatzean: " + e.getMessage(),
-					"Errorea", JOptionPane.ERROR_MESSAGE);
+			JOptionPane.showMessageDialog(this, "Errorea historialeko datuak egiaztatzean: " + e.getMessage(), "Errorea", JOptionPane.ERROR_MESSAGE);
 			return;
 		}
 		finally
@@ -297,15 +303,14 @@ public class ErabiltzaileLehioa extends JFrame
 
 		if (!hasTrips)
 		{
-			JOptionPane.showMessageDialog(this, "Erabiltzaile honek ez du bidaia historialik erregistratuta.",
-					"Ohartarazpena", JOptionPane.INFORMATION_MESSAGE);
+			JOptionPane.showMessageDialog(this, "Erabiltzaile honek ez du bidaia historialik erregistratuta.", "Ohartarazpena", JOptionPane.INFORMATION_MESSAGE);
 			return;
 		}
 
 		// Historial leiho berria sortu
 		JFrame historialLehioaBerria = new JFrame("Erabiltzailearen Historiala: " + NAN);
-		historialLehioaBerria.setSize(1200, 800);
-		historialLehioaBerria.setResizable(false);
+		historialLehioaBerria.setSize(1400, 800);
+		historialLehioaBerria.setResizable(true);
 		historialLehioaBerria.setLocationRelativeTo(this); // Leiho nagusiarekiko zentratu
 		historialLehioaBerria.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
@@ -323,15 +328,16 @@ public class ErabiltzaileLehioa extends JFrame
 		historialTxartelPanela.add(hutsikEgoeraPanela, HUTSIK_EGOERA_TXARTELA);
 
 		// 2. Taula egoera (bidaiak daude)
-		DefaultTableModel	historialModelo	= new DefaultTableModel(new Object[][] {}, new String[] {
-				"Bidaia ID", "Erabiltzaile NAN", "Erabiltzaile izena", "Gidari NAN", "Gidari izena", "Data",
-				"Hasiera_ordua", "Amaiera_ordua", "Pertsona kopurua", "Hasiera", "Helmuga"
+		DefaultTableModel	historialModelo	= new DefaultTableModel(new Object[][]
+		{}, new String[]
+		{
+				"Bidaia ID", "Erabiltzaile NAN", "Erabiltzaile izena", "Gidari NAN", "Gidari izena", "Hasiera data", "Amaiera data", "Pertsona kopurua", "Hasiera", "Helmuga"
 		});
 
 		JTable				historialTaula	= new JTable(historialModelo);
 		historialTaula.setFillsViewportHeight(true);
 		historialTaula.setDefaultEditor(Object.class, null); // Ez editagarria
-
+		historialTaula.setRowHeight(30);
 		// Taulako testua zentratu
 		DefaultTableCellRenderer renderer = new DefaultTableCellRenderer();
 		renderer.setHorizontalAlignment(JLabel.CENTER);
@@ -398,8 +404,7 @@ public class ErabiltzaileLehioa extends JFrame
 															{
 
 																@Override
-																protected List<Object[]> doInBackground()
-																		throws Exception
+																protected List<Object[]> doInBackground() throws Exception
 																{
 																	List<Object[]>	data	= new ArrayList<>();
 																	ResultSet		rs		= null;
@@ -409,36 +414,28 @@ public class ErabiltzaileLehioa extends JFrame
 																		while (rs != null && rs.next())
 																		{
 																			// Datuak eratu
-																			int		bidaia				= rs
-																					.getInt("bh.Bidaia_id");
-																			String	nan					= rs
-																					.getString("E.nan");
-																			String	izena				= rs
-																					.getString("e.izena") + " "
-																					+ rs.getString("e.abizena");
-																			String	gidariNan			= rs
-																					.getString("bh.Gidari_nan");
-																			String	gidariIzena			= rs
-																					.getString("g.izena") + " "
-																					+ rs.getString("g.abizena");
-																			Date	data2				= rs
-																					.getDate("bh.data");
-																			Time	hasiera_ordua		= rs
-																					.getTime("bh.hasiera_ordua");
-																			Time	amaiera_ordua		= rs
-																					.getTime("bh.amaiera_ordua");
-																			int		pertsona_kopurua	= rs
-																					.getInt("bh.pertsona_kopurua");
-																			String	hasiera				= rs
-																					.getString("bh.hasiera");
-																			String	helmuga				= rs
-																					.getString("bh.helmuga");
+																			int		bidaia				= rs.getInt("bh.Bidaia_id");
+																			String	nan					= rs.getString("E.nan");
+																			String	izena				= rs.getString("e.izena") + " " + rs.getString("e.abizena");
+																			String	gidariNan			= rs.getString("bh.Gidari_nan");
+																			String	gidariIzena			= rs.getString("g.izena") + " " + rs.getString("g.abizena");
+																			Date	data2				= rs.getDate("bh.data");
+																			Time	hasiera_ordua		= rs.getTime("bh.hasiera_ordua");
+																			Time	amaiera_ordua		= rs.getTime("bh.amaiera_ordua");
+																			int		pertsona_kopurua	= rs.getInt("bh.pertsona_kopurua");
+																			String	hasiera				= rs.getString("bh.hasiera");
+																			String	helmuga				= rs.getString("bh.helmuga");
 
-																			data.add(new Object[] {
-																					bidaia, nan, izena, gidariNan,
-																					gidariIzena, data2, hasiera_ordua,
-																					amaiera_ordua, pertsona_kopurua,
-																					hasiera, helmuga
+																			String	hasiera_data		= data2 + " " + hasiera_ordua;
+																			String	amaiera_data		= data2 + " " + amaiera_ordua;
+
+//																			data.add(new Object[]
+//																			{
+//																					bidaia, nan, izena, gidariNan, gidariIzena, data2, hasiera_ordua, amaiera_ordua, pertsona_kopurua, hasiera, helmuga
+//																			});
+																			data.add(new Object[]
+																			{
+																					bidaia, nan, izena, gidariNan, gidariIzena, hasiera_data, amaiera_data, pertsona_kopurua, hasiera, helmuga
 																			});
 																		}
 																	}
@@ -467,34 +464,28 @@ public class ErabiltzaileLehioa extends JFrame
 																		List<Object[]> newData = get();
 																		if (newData.isEmpty())
 																		{
-																			// Ez dago bidaiarik: hutsik egoera erakutsi
-																			historialTxartelDiseinua.show(
-																					historialTxartelPanela,
-																					HUTSIK_EGOERA_TXARTELA);
+																			// Ez dago bidaiarik:
+																			// hutsik egoera
+																			// erakutsi
+																			historialTxartelDiseinua.show(historialTxartelPanela, HUTSIK_EGOERA_TXARTELA);
 																		}
 																		else
 																		{
-																			// Bidaiak daude: taula eguneratu
+																			// Bidaiak daude: taula
+																			// eguneratu
 																			historialModelo.setRowCount(0);
 																			for (Object[] row : newData)
 																			{
 																				historialModelo.addRow(row);
 																			}
-																			historialTxartelDiseinua.show(
-																					historialTxartelPanela,
-																					TAULA_BISTA_TXARTELA);
+																			historialTxartelDiseinua.show(historialTxartelPanela, TAULA_BISTA_TXARTELA);
 																		}
 																	}
 																	catch (InterruptedException | ExecutionException ex)
 																	{
 																		ex.printStackTrace();
-																		JOptionPane.showMessageDialog(
-																				historialLehioaBerria,
-																				"Errorea historialeko datuak eguneratzean.",
-																				"Errorea", JOptionPane.ERROR_MESSAGE);
-																		historialTxartelDiseinua.show(
-																				historialTxartelPanela,
-																				HUTSIK_EGOERA_TXARTELA);
+																		JOptionPane.showMessageDialog(historialLehioaBerria, "Errorea historialeko datuak eguneratzean.", "Errorea", JOptionPane.ERROR_MESSAGE);
+																		historialTxartelDiseinua.show(historialTxartelPanela, HUTSIK_EGOERA_TXARTELA);
 																	}
 																}
 
@@ -552,6 +543,5 @@ public class ErabiltzaileLehioa extends JFrame
 			sorter.setRowFilter(RowFilter.regexFilter("(?i)\\Q" + text + "\\E"));
 		}
 	}
-
 
 }

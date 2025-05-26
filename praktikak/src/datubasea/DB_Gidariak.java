@@ -126,7 +126,7 @@ public class DB_Gidariak
 	public static ResultSet getDatuakBidaiak(String nan) throws SQLException
 	{
 
-		String				sql_check	= "SELECT bh.Gidari_nan, bh.Data, bh.Hasiera_ordua, bh.Hasiera, bh.Helmuga, g.izena AS gidari_izena, g.Abizena AS gidari_abizena, "
+		String				sql_check	= "SELECT bh.Gidari_nan, bh.Data, bh.Hasiera_ordua, bh.Amaiera_ordua, bh.Hasiera, bh.Helmuga, g.izena AS gidari_izena, g.Abizena AS gidari_abizena, "
 										+ "e.NAN AS erabiltzaile_nan, e.Izena AS erabiltzaile_izena, e.Abizena AS erabiltzaile_abizena "
 										+ "FROM bidai_historiala bh INNER JOIN gidaria g ON bh.Gidari_nan = g.NAN INNER JOIN erabiltzailea e ON bh.Erabiltzaile_nan = e.NAN WHERE bh.Gidari_nan = ? ";
 		PreparedStatement	stmt		= conn.prepareStatement(sql_check);

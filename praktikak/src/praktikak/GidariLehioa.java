@@ -53,7 +53,7 @@ public class GidariLehioa extends JFrame
 	{
 
 		setTitle("Kudeatzailea");
-		setSize(800, 600);
+		setSize(900, 600);
 		setResizable(false);
 		setLocationRelativeTo(null);
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -74,10 +74,6 @@ public class GidariLehioa extends JFrame
 		edukiontzia.add(topPanel, BorderLayout.NORTH);
 
 		// Taula
-//		modelo = new DefaultTableModel(new Object[]
-//		{
-//				"NAN", "Izena", "Abizena", "Posta", "Telefono zenbakia", "Kokapena", "Lan lekua", "Matrikula"
-//		}, 0);
 		modelo = new DefaultTableModel(new Object[]
 		{
 				"NAN", "Izen abizena", "Posta", "Telefono zenbakia", "Kokapena", "Lan lekua", "Matrikula"
@@ -215,7 +211,7 @@ public class GidariLehioa extends JFrame
 					}
 
 					historialLehioaAktiboa = new JFrame("Erabiltzailearen Historiala (" + historialaNAN + ")");
-					historialLehioaAktiboa.setSize(800, 500);
+					historialLehioaAktiboa.setSize(1300, 800);
 					historialLehioaAktiboa.setLocationRelativeTo(null);
 					historialLehioaAktiboa.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
@@ -238,7 +234,6 @@ public class GidariLehioa extends JFrame
 					edukiontzia.setBorder(new EmptyBorder(10, 10, 10, 10));
 					historialLehioaAktiboa.setContentPane(edukiontzia);
 
-					// Panel superior con título y campo de búsqueda
 					JPanel	topPanel	= new JPanel(new BorderLayout(10, 10));
 					JLabel	lbl			= new JLabel("Bidaia Historiala", JLabel.LEFT);
 					lbl.setFont(new Font("Segoe UI", Font.BOLD, 20));
@@ -252,7 +247,7 @@ public class GidariLehioa extends JFrame
 
 					historialaModeloa = new DefaultTableModel(new Object[]
 					{
-							"Gidaria NAN", "Gidari Izena", "Erabiltzaile NAN", "Erabiltzaile Izena", "Data", "Hasiera", "Helmuga"
+							"Gidaria NAN", "Gidari Izena", "Erabiltzaile NAN", "Erabiltzaile Izena", "Hasiera data", "Amaiera data", "Hasiera", "Helmuga"
 					}, 0);
 					historialTaula = new JTable(historialaModeloa);
 					historialaSorter = new TableRowSorter<>(historialaModeloa);
@@ -372,10 +367,9 @@ public class GidariLehioa extends JFrame
 			JTextField	lekuaField		= new JTextField();
 			JTextField	matrikulaField	= new JTextField();
 
-			JPanel		panel			= new JPanel(new GridLayout(9, 2));
+			JPanel		panel			= new JPanel(new GridLayout(8, 2));
 			panel.add(new JLabel("NAN:"));
 			panel.add(nanField);
-
 			panel.add(new JLabel("Izena:"));
 			panel.add(izenaField);
 			panel.add(new JLabel("Abizena:"));
@@ -427,7 +421,7 @@ public class GidariLehioa extends JFrame
 
 						nanField.setEditable(false); // nan-a editatzeko aukera kentzeko
 
-						JPanel panel = new JPanel(new GridLayout(9, 2));
+						JPanel panel = new JPanel(new GridLayout(8, 2));
 						panel.add(new JLabel("NAN:"));
 						panel.add(nanField);
 						panel.add(new JLabel("Izena:"));
@@ -650,7 +644,8 @@ public class GidariLehioa extends JFrame
 				String	gidariaNan			= rs.getString("Gidari_nan");
 				String	erabNAN				= rs.getString("erabiltzaile_nan");
 				Date	data				= rs.getDate("Data");
-				Time	ordua				= rs.getTime("hasiera_ordua");
+				Time	hasiera_ordua		= rs.getTime("hasiera_ordua");
+				Time	amaiera_ordua		= rs.getTime("amaiera_ordua");
 				String	hasiera				= rs.getString("hasiera");
 				String	helmuga				= rs.getString("helmuga");
 				String	gidariIzena			= rs.getString("gidari_izena");
@@ -660,10 +655,11 @@ public class GidariLehioa extends JFrame
 
 				String	erabIzena			= erabiltzaileIzena + " " + erabiltzaileAbizena;
 				String	gidIzena			= gidariIzena + " " + gidariAbizena;
-				String	data2				= data + " " + ordua;
+				String	hasiera_data		= data + " " + hasiera_ordua;
+				String	amaiera_data		= data + " " + amaiera_ordua;
 				historialaModeloa.addRow(new Object[]
 				{
-						gidariaNan, gidIzena, erabNAN, erabIzena, data2, hasiera, helmuga
+						gidariaNan, gidIzena, erabNAN, erabIzena, hasiera_data, amaiera_data, hasiera, helmuga
 				});
 
 			}
@@ -705,8 +701,8 @@ public class GidariLehioa extends JFrame
 				String	kokapena	= rs.getString("Kokapena");
 				String	lan_lekua	= rs.getString("Lan_Lekua");
 				String	Matrikula	= rs.getString("Matrikula");
-				
-				String izenAbizena = izena + " " + abizena;
+
+				String	izenAbizena	= izena + " " + abizena;
 
 				modelo.addRow(new Object[]
 				{
