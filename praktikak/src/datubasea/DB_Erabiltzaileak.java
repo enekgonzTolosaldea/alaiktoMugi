@@ -6,38 +6,20 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-public class DB_Erabiltzaileak {
+public class DB_Erabiltzaileak
+{
 
-   
+	static Connection conn = DBGestorea.getConexion();
 
-    // Erabiltzailearen historialari buruzko kontsulta egitea
-    public static void erabiltzailearenHistorialaIkusi(String erabiltzaileNan) {
-        String kontsulta = "SELECT * FROM Bidai_historiala WHERE erabiltzaile_NAN = ?"; 
+	public static ResultSet getDatuak() throws SQLException
+	{
 
-        try (PreparedStatement stmt = DBGestorea.getConexion().prepareStatement(kontsulta)) {
-            // Parametroa jarri kontsultaren prestatuan
-            stmt.setString(1, erabiltzaileNan);
+		String				sql_check	= "SELECT * FROM erabiltzailea";
+		PreparedStatement	stmt		= conn.prepareStatement(sql_check);
 
-            // Kontsulta exekutatu eta emaitzak lortu
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    // Emaitzak jaso eta inprimatu
-                    int id = rs.getInt("Bidaia_id");
-   
+		ResultSet			rs1			= stmt.executeQuery();
 
-                    System.out.println("ID: " + id );
-                }
-            }
-        } catch (SQLException e) {
-            System.err.println("Errore bat egon da kontsulta egitean: " + e.getMessage());
-            e.printStackTrace();
-        } finally {
-            DBGestorea.itxiSesioa(); // Konektibitatea itxi
-        }
-    }
+		return rs1;
+	}
 
-    public static void main(String[] args) {
-        // Adibide bat: erabiltzailearen historialaren kontsulta egitea
-        erabiltzailearenHistorialaIkusi("12345678A"); // Hemen sartu erabiltzailearen NAN-a
-    }
 }
