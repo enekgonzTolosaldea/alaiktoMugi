@@ -74,9 +74,13 @@ public class GidariLehioa extends JFrame
 		edukiontzia.add(topPanel, BorderLayout.NORTH);
 
 		// Taula
+//		modelo = new DefaultTableModel(new Object[]
+//		{
+//				"NAN", "Izena", "Abizena", "Posta", "Telefono zenbakia", "Kokapena", "Lan lekua", "Matrikula"
+//		}, 0);
 		modelo = new DefaultTableModel(new Object[]
 		{
-				"NAN", "Izena", "Abizena", "Posta", "Telefono zenbakia", "Kokapena", "Lan lekua", "Matrikula"
+				"NAN", "Izen abizena", "Posta", "Telefono zenbakia", "Kokapena", "Lan lekua", "Matrikula"
 		}, 0);
 		taula = new JTable(modelo);
 		sorter = new TableRowSorter<>(modelo);
@@ -89,15 +93,16 @@ public class GidariLehioa extends JFrame
 
 		DefaultTableCellRenderer renderer = new DefaultTableCellRenderer();
 		renderer.setHorizontalAlignment(JLabel.CENTER); // testua zentratzeko
-		renderer.setBorder(new EmptyBorder(10, 10, 10, 10)); // Añade padding interno
+		renderer.setBorder(new EmptyBorder(10, 10, 10, 10)); // padding-a jartzeko
 
 		for (int i = 0; i < taula.getColumnCount(); i++)
 		{
 			taula.getColumnModel().getColumn(i).setCellRenderer(renderer);
 		}
 
+		// 5 segundu pasatzerakoan eguneratzeko
 		mainTableTimer = new Timer(5000, new ActionListener()
-		{ // Refrescar cada 5 segundos
+		{
 
 			@Override
 			public void actionPerformed(ActionEvent e)
@@ -114,7 +119,7 @@ public class GidariLehioa extends JFrame
 			}
 
 		});
-		mainTableTimer.start(); // Iniciar el timer
+		mainTableTimer.start(); // timer-a hasteko
 
 		// Datu baseko gidarien datuak bistaratzeko
 		try
@@ -133,7 +138,7 @@ public class GidariLehioa extends JFrame
 			@Override
 			public void windowGainedFocus(WindowEvent e)
 			{
-				// Cuando la ventana principal obtiene el foco, actualiza también su contenido
+				// lehio sagusi focus dagoenean eguneratzeko
 				try
 				{
 					gidariakBistaratu();
@@ -159,7 +164,7 @@ public class GidariLehioa extends JFrame
 			@Override
 			public void windowClosed(WindowEvent e)
 			{
-				// Asegúrate de detener los timers cuando la ventana se cierra
+				// leihoa isterakoan timerrak gelditzeko
 				if (mainTableTimer != null && mainTableTimer.isRunning())
 				{
 					mainTableTimer.stop();
@@ -192,7 +197,22 @@ public class GidariLehioa extends JFrame
 						return;
 					int modeloRow = taula.convertRowIndexToModel(row);
 					historialaNAN = modelo.getValueAt(modeloRow, 0).toString();
-//                        System.out.println(NAN);
+
+					try (ResultSet rs = DB_Gidariak.getDatuakBidaiak(historialaNAN))
+					{
+						// Gidariaren historiala hutsik badago
+						if (!rs.isBeforeFirst())
+						{
+							JOptionPane.showMessageDialog(GidariLehioa.this, "Ez dago bidai historiarik gidari honentzat.", "Informazioa", JOptionPane.INFORMATION_MESSAGE);
+							return;
+						}
+					}
+					catch (SQLException e)
+					{
+						e.printStackTrace();
+						JOptionPane.showMessageDialog(GidariLehioa.this, "Errorea historialaren datuak kargatzean: " + e.getMessage(), "Datu-base errorea", JOptionPane.ERROR_MESSAGE);
+						return;
+					}
 
 					historialLehioaAktiboa = new JFrame("Erabiltzailearen Historiala (" + historialaNAN + ")");
 					historialLehioaAktiboa.setSize(800, 500);
@@ -244,7 +264,7 @@ public class GidariLehioa extends JFrame
 
 					DefaultTableCellRenderer renderer = new DefaultTableCellRenderer();
 					renderer.setHorizontalAlignment(JLabel.CENTER); // testua zentratzeko
-					renderer.setBorder(new EmptyBorder(10, 10, 10, 10)); // Añade padding interno
+					renderer.setBorder(new EmptyBorder(10, 10, 10, 10)); // padding-a jartzeko
 
 					for (int i = 0; i < historialTaula.getColumnCount(); i++)
 					{
@@ -355,7 +375,7 @@ public class GidariLehioa extends JFrame
 			JPanel		panel			= new JPanel(new GridLayout(9, 2));
 			panel.add(new JLabel("NAN:"));
 			panel.add(nanField);
-			
+
 			panel.add(new JLabel("Izena:"));
 			panel.add(izenaField);
 			panel.add(new JLabel("Abizena:"));
@@ -645,16 +665,11 @@ public class GidariLehioa extends JFrame
 				{
 						gidariaNan, gidIzena, erabNAN, erabIzena, data2, hasiera, helmuga
 				});
-			}
-			if (!rs.next())
-			{
-				JOptionPane.showMessageDialog(this, "Hutsik dago", "Oharturazpena: ", JOptionPane.INFORMATION_MESSAGE);
-				rs.close();
-				return;
+
 			}
 		}
 
-		// Restaurar la selección y la vista si es posible
+		// aukera eta bista reiniziatzeko
 		if (selectedRow != -1 && selectedRow < historialTaula.getRowCount())
 		{
 			historialTaula.setRowSelectionInterval(selectedRow, selectedRow);
@@ -690,10 +705,12 @@ public class GidariLehioa extends JFrame
 				String	kokapena	= rs.getString("Kokapena");
 				String	lan_lekua	= rs.getString("Lan_Lekua");
 				String	Matrikula	= rs.getString("Matrikula");
+				
+				String izenAbizena = izena + " " + abizena;
 
 				modelo.addRow(new Object[]
 				{
-						NAN, izena, abizena, posta, tel_zenb, kokapena, lan_lekua, Matrikula
+						NAN, izenAbizena, posta, tel_zenb, kokapena, lan_lekua, Matrikula
 				});
 			}
 		}
@@ -744,7 +761,7 @@ public class GidariLehioa extends JFrame
 		if (Mota == Mota.DNI)
 			regex = "[0-9]{8}[A-Z]{1}";
 		if (Mota == Mota.Matrikula)
-			regex = "[0-9]{4}[A-Z]{3}"; // Ej. 1234ABC
+			regex = "[0-9]{4}[A-Z]{3}";
 		if (Mota == Mota.posta)
 			regex = "^[\\w\\.-]+@[\\w\\.-]+\\.[a-zA-Z]{2,}$";
 		if (Mota == Mota.telf)

@@ -31,6 +31,19 @@ public class DB_Gidariak
 
 	}
 
+	/**
+	 * 
+	 * @param nan editatzeko
+	 * @param izena editatzeko
+	 * @param abizena editatzeko
+	 * @param posta editatzeko
+	 * @param Tel_zenb editatzeko
+	 * @param pasahitza editatzeko
+	 * @param kokapena editatzeko
+	 * @param lan_lekua editatzeko
+	 * @param matrikula editatzeko
+	 * @throws SQLException Datu basearekin erroreak egon badira
+	 */
 	public static void editGidariak(String nan, String izena, String abizena, String posta, String Tel_zenb,
 			String pasahitza, String kokapena, String lan_lekua, String matrikula) throws SQLException
 	{
@@ -53,6 +66,11 @@ public class DB_Gidariak
 
 	}
 
+	/**
+	 * 
+	 * @param nan aukeratutako gidariaren dni pasatzeko
+	 * @throws SQLException Datu basearekin erroreak egon badira
+	 */
 	public static void deleteGidaria(String nan) throws SQLException
 	{
 		String				delete_sql	= "DELETE FROM gidaria WHERE NAN = ?";
@@ -64,6 +82,11 @@ public class DB_Gidariak
 
 	}
 
+	/**
+	 * 
+	 * @return sql kontsultaren bidez ateratako datuak pasatzeko
+	 * @throws SQLException Datu basearekin erroreak egon badira
+	 */
 	public static ResultSet getDatuak() throws SQLException
 	{
 
@@ -75,6 +98,12 @@ public class DB_Gidariak
 		return rs1;
 	}
 	
+	/**
+	 * 
+	 * @param nan aukeratutako gidariaren NAN-a
+	 * @return sql kontsultaren bidez ateratako datuak pasatzeko
+	 * @throws SQLException Datu basearekin erroreak egon badira
+	 */
 	public static ResultSet getGidariaNAN(String nan) throws SQLException
 	{
 
@@ -87,18 +116,22 @@ public class DB_Gidariak
 
 		return rs1;
 	}
-
+	
+	/**
+	 * 
+	 * @param nan aukeratutako gidariaren NAN-a
+	 * @return sql kontsultaren bidez ateratako datuak pasatzeko
+	 * @throws SQLException Datu basearekin erroreak egon badira
+	 */
 	public static ResultSet getDatuakBidaiak(String nan) throws SQLException
 	{
 
-//		String				sql_check	= "SELECT * FROM bidai_historiala WHERE Gidari_nan = ?";
 		String				sql_check	= "SELECT bh.Gidari_nan, bh.Data, bh.Hasiera_ordua, bh.Hasiera, bh.Helmuga, g.izena AS gidari_izena, g.Abizena AS gidari_abizena, "
 										+ "e.NAN AS erabiltzaile_nan, e.Izena AS erabiltzaile_izena, e.Abizena AS erabiltzaile_abizena "
 										+ "FROM bidai_historiala bh INNER JOIN gidaria g ON bh.Gidari_nan = g.NAN INNER JOIN erabiltzailea e ON bh.Erabiltzaile_nan = e.NAN WHERE bh.Gidari_nan = ? ";
 		PreparedStatement	stmt		= conn.prepareStatement(sql_check);
 
 		stmt.setString(1, nan);
-//		System.out.println(sql_check);
 		ResultSet			rs2			= stmt.executeQuery();
 		return rs2;
 	}
